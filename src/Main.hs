@@ -99,7 +99,7 @@ renderListSelector i = translate (-320) (-listItemVerticalPadding*(fromIntegral 
                             $ circle 10
 
 render :: MenuList -> Picture
-render (MenuList items s) = Pictures ((renderListItem <$> zip items [0..(length items)-1]) ++ [renderListSelector s])
+render (MenuList items s) = Pictures ((renderListItem <$> zip items [0..]) ++ [renderListSelector s])
 
 handle :: Event -> MenuList -> MenuList
 handle (EventKey (SpecialKey KeyDown) Down _ _) (MenuList items s) = (MenuList items ((s+1) `mod` (length items)))
