@@ -51,6 +51,11 @@
 
 module Main (main) where
 
+import Data.Maybe
+
+import Graphics.Gloss.Juicy
+    ( loadJuicy)
+
 import Graphics.Gloss.Interface.Pure.Game
     ( Color
     , Display(InWindow)
@@ -68,44 +73,69 @@ import Graphics.Gloss.Interface.Pure.Game
     )
 
 data MenuList = MenuList [String] Int
+data WorldState = WorldState Picture MenuList
 
 main :: IO ()
-main = play display background framerate initial render handle step
+main = do
+    background <- loadBackground
+    case background of
+        Nothing -> error "No background could be loaded."
+        Just b -> play display backgroundColor framerate (initial b) render handle step
+
+width :: Int
+width = 800
+
+height :: Int
+height = 600
 
 display :: Display
-display = InWindow "Grand Theft Hammock" (800, 600) (800, 600)
+display = InWindow "Grand Theft Hammock" (width, height) (width, height)
 
-background :: Color
-background = makeColor 1 1 1 1
+backgroundColor :: Color
+backgroundColor = makeColor 1 1 1 1
 
 framerate :: Int
 framerate = 60
 
-initial :: MenuList
-initial = MenuList ["New Game", "Continue", "Options", "Quit"] 0
+initial :: Picture -> WorldState
+initial p = WorldState p ml
+        where ml = MenuList ["New Game", "Continue", "Options", "Quit"] 0
 
 listItemVerticalPadding :: Float
 listItemVerticalPadding = 55
 
+loadBackground :: IO (Maybe Picture)
+loadBackground = loadJuicy "assets/images/main-menu-background.jpg"
+
 renderListItem :: (String, Int) -> Picture
 renderListItem (item, i) = let verticalPadding = listItemVerticalPadding
                             in 
-                            translate (-300) (-verticalPadding*(fromIntegral i)) 
+                            translate (-340) (-verticalPadding*(fromIntegral i)) 
                             $ scale 0.33 0.33 
                             $ text item
 
 renderListSelector :: Int -> Picture
-renderListSelector i = translate (-320) (-listItemVerticalPadding*(fromIntegral i)+14)
+renderListSelector i = translate (-360) (-listItemVerticalPadding*(fromIntegral i)+14)
                             $ circle 10
 
-render :: MenuList -> Picture
-render (MenuList items s) = Pictures ((renderListItem <$> zip items [0..]) ++ [renderListSelector s])
+renderBackground :: Picture -> Picture
+renderBackground p = translate 200 0 $ p
 
-handle :: Event -> MenuList -> MenuList
-handle (EventKey (SpecialKey KeyDown) Down _ _) (MenuList items s) = (MenuList items ((s+1) `mod` (length items)))
-handle (EventKey (SpecialKey KeyUp) Down _ _) (MenuList items s) = (MenuList items ((s-1) `mod` (length items)))
-handle _ w = w
+render :: WorldState -> Picture
+render (WorldState p (MenuList items s)) = 
+    Pictures (     [renderBackground p]
+                ++ (renderListItem <$> zip items [0..]) 
+                ++ [renderListSelector s]   )
 
-step :: Float -> MenuList -> MenuList
-step t w = w
+handle :: Event -> WorldState -> WorldState
+handle (EventKey (SpecialKey KeyDown) Down _ _) (WorldState p (MenuList items s)) 
+                = WorldState p (MenuList items 
+                    ((s+1) `mod` length items))
+handle (EventKey (SpecialKey KeyUp) Down _ _) (WorldState p (MenuList items s)) 
+                = WorldState p (MenuList items 
+                    ((s-1) `mod` length items))
+handle _ ws = ws
+
+step :: Float -> WorldState -> WorldState
+step t ws = ws
 
