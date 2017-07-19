@@ -17,6 +17,7 @@ lookupPicture :: E.Entity -> T.Trie -> Maybe Picture
 lookupPicture e t = T.lookup (E.pictureFilePath e) t
 
 lookupPictures :: [E.Entity] -> T.Trie -> [Maybe Picture]
+lookupPictures [] _ = []
 lookupPictures (e:es) t = lookupPicture e t : lookupPictures es t
 
 renderSystem :: [E.Entity] -> T.Trie -> [Picture]
