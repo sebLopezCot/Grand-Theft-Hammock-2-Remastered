@@ -8,8 +8,8 @@ type AudioAssets = Nothing
 
 data Difficulty = Easy | Medium | Hard
 
-type MusicEnabled = Boolean
-type SoundFXEnabled = Boolean
+type MusicEnabled = Bool
+type SoundFXEnabled = Bool
 
 data WorldState = WorldState 
                     
