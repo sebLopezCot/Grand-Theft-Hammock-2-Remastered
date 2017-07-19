@@ -18,10 +18,7 @@ loadImagesFromAssetsDirectory :: IO (T.Trie)
 loadImagesFromAssetsDirectory = do
 	filepaths <- listDirectory "../assets/images/"
 	let imagepaths = filter isImage filepaths
-	let keypairs = zipWith f imagepaths $ loadJuicy <$> imagepaths
-		where f = \path mp -> case mp of
-								Just p -> Just (path, p)
-								Nothing -> Nothing
+	let keypairs = (\fp -> (,) fp <$> loadJuicy fp) <$> imagepaths
 	let trie = T.fromList $ catMaybes keypairs
 
 	return trie
