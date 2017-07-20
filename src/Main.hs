@@ -59,7 +59,7 @@ render :: WorldState -> Picture
 render ws = pictures $ Systems.renderSystem (entities ws) (imageAssets ws)
 
 handle :: Event -> WorldState -> WorldState
-handle _ ws = ws
+handle ev ws = ws { entities = Systems.controllerSystem ev (entities ws) } 
 
 step :: Float -> WorldState -> WorldState
 step _ ws = ws

@@ -22,8 +22,8 @@ loadImagesFromAssetsDirectory = do
     filepaths <- listDirectory dir
     let imagepaths = filter isImage filepaths
     keypairs <- traverse (\fp -> ((,) fp <$>) <$> loadJuicy (dir ++ fp)) imagepaths
-    let map = M.fromList $ catMaybes keypairs
+    let imgmap = M.fromList $ catMaybes keypairs
 
-    pure map
+    pure imgmap
 
 
