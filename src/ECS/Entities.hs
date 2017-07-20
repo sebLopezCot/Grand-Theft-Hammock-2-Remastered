@@ -8,6 +8,7 @@ data Entity = Entity {
     position :: Maybe Position,
     velocity :: Maybe Velocity,
     acceleration :: Maybe Acceleration,
+    movementDirection :: Maybe MovementDirection,
 
     dimensions :: Maybe Dimensions,
 
@@ -29,6 +30,7 @@ empty = Entity {
     position = Nothing,
     velocity = Nothing,
     acceleration = Nothing,
+    movementDirection = Nothing,
     
     dimensions = Nothing,
     
@@ -47,7 +49,8 @@ startsFromRest :: Entity -> Entity
 startsFromRest e = e {
     position = Just Position { px = 0, py = 0 },
     velocity = Just Velocity { vx = 0, vy = 0 },
-    acceleration = Just Acceleration { ax = 0, ay = 0 } 
+    acceleration = Just Acceleration { ax = 0, ay = 0 },
+    movementDirection = Just Rightward
 }
 
 hasDimensions :: Dimensions -> Entity -> Entity

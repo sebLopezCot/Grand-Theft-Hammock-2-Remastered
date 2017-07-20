@@ -8,9 +8,15 @@ import Graphics.Gloss.Interface.Pure.Game
     ( Picture (..)
     )
 
+data ControlStream = ControlStream {
+	holdingLeftArrow :: Bool,
+	holdingRightArrow :: Bool	
+}
+
 data WorldState = WorldState {
 	imageAssets :: M.Map String Picture,
-	entities :: [Entity]
+	entities :: [Entity],
+	controlStream :: ControlStream
 }
 
 

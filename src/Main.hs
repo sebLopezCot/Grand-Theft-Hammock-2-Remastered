@@ -23,7 +23,7 @@ import qualified Data.Map as M
 import qualified ECS.Entities as Entities
 import qualified ECS.Systems as Systems
 import qualified ECS.ImageLoader as ImageLoader
-import WorldState
+import qualified WorldState as WS
 
 main :: IO ()
 main = do
@@ -45,24 +45,30 @@ backgroundColor = makeColor 1 1 1 1
 framerate :: Int
 framerate = 60
 
-initial :: M.Map String Picture -> WorldState
-initial imgs = WorldState { 
-    imageAssets = imgs, 
-    entities = [
+initial :: M.Map String Picture -> WS.WorldState
+initial imgs = WS.WorldState { 
+    WS.imageAssets = imgs, 
+    WS.entities = [
         Entities.beachBackground,
         Entities.tony,
         Entities.cop
-    ]
+    ],
+    WS.controlStream = WS.ControlStream { 
+        WS.holdingLeftArrow = False, 
+        WS.holdingRightArrow = False 
+    }
  }
 
-render :: WorldState -> Picture
-render ws = pictures $ Systems.renderSystem (entities ws) (imageAssets ws)
+render :: WS.WorldState -> Picture
+render ws = pictures $ Systems.renderSystem (WS.entities ws) (WS.imageAssets ws)
 
-handle :: Event -> WorldState -> WorldState
-handle ev ws = ws { entities = Systems.controllerSystem ev (entities ws) } 
+handle :: Event -> WS.WorldState -> WS.WorldState
+handle ev ws = ws { WS.entities = fst results, WS.controlStream = snd results }
+    where results = 
+            Systems.controllerSystem ev (WS.entities ws) (WS.controlStream ws)
 
-step :: Float -> WorldState -> WorldState
-step _ ws = ws
+step :: Float -> WS.WorldState -> WS.WorldState
+step dt ws = ws { WS.entities = Systems.physicsSystem dt (WS.entities ws) }
 
 
 

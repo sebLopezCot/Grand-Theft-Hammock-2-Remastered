@@ -11,3 +11,6 @@ data Acceleration 	= 	Acceleration { ax :: Float, ay :: Float }
 
 data Dimensions 	= 	Dimensions { width :: Float, height :: Float }
 	deriving (Eq, Ord, Show)
+
+data MovementDirection = Leftward | Rightward
+	deriving (Eq, Ord, Show)
