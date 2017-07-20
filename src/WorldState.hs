@@ -1,32 +1,16 @@
-
 module WorldState where
 
-import Data.Map
+import qualified Data.Map as M
 
-type ImageAssets = Map FilePath Picture
-type AudioAssets = Nothing
+import ECS.Entities
 
-data Difficulty = Easy | Medium | Hard
+import Graphics.Gloss.Interface.Pure.Game
+    ( Picture (..)
+    )
 
-type MusicEnabled = Bool
-type SoundFXEnabled = Bool
-
-data WorldState = WorldState 
-                    
-                    -- Loadable assets
-                    ImageAssets
-                    AudioAssets
-
-                    -- Menus
-                    MainMenuList
-                    PauseMenuList
-
-                    -- Settings
-                    Difficulty
-                    MusicEnabled
-                    SoundFXEnabled
-
-                    -- Scene ID
-                    SceneID
+data WorldState = WorldState {
+	imageAssets :: M.Map String Picture,
+	entities :: [Entity]
+}
 
 

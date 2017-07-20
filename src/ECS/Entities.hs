@@ -1,12 +1,6 @@
-module Entities where
+module ECS.Entities where
 
-import Data.IntMap (IntMap)
-
-import Graphics.Gloss.Interface.Pure.Game
-    ( Picture
-    )
-
-import Components
+import ECS.Components
 
 -- Entity Definition
 -- =====================================
@@ -20,7 +14,7 @@ data Entity = Entity {
     pictureFilePath :: Maybe FilePath,
 
     health :: Maybe Int,
-    ammo :: Maybe Int,
+    ammoEachReload :: Maybe Int,
 
     isTony :: Bool,
     isCop :: Bool,
@@ -107,4 +101,4 @@ baggedHammock = isABasicObject "baggedHammock.png" dims $ empty
     where dims = Dimensions { width = 20, height = 60 }
 
 beachBackground :: Entity
-beachBackground = isABackground "beachBackground.png" $ empty
+beachBackground = isABackground "beachBackground.jpg" $ empty
