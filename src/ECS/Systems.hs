@@ -3,7 +3,7 @@ module ECS.Systems where
 import Data.Maybe (catMaybes, fromMaybe)
 import qualified Data.Map as M
 
-import ECS.Components as C
+import qualified ECS.Components as C
 import qualified ECS.Entities as E
 
 import Graphics.Gloss.Interface.Pure.Game
@@ -19,9 +19,10 @@ import Graphics.Gloss.Interface.Pure.Game
 -- ========================================================================================
 updatePosition :: Float -> Float -> E.Entity -> E.Entity
 updatePosition dx dy e = e { 
-    E.position = Just C.Position { px = fromMaybe 0 $ (+dx) <$> C.px <$> E.position e, 
-                                   py = fromMaybe 0 $ (+dy) <$> C.py <$> E.position e
-                                 } 
+    E.position = 
+        Just C.Position { C.px = fromMaybe 0 $ (+dx) <$> C.px <$> E.position e, 
+                          C.py = fromMaybe 0 $ (+dy) <$> C.py <$> E.position e
+                        } 
 }
 
 controllerSystem :: Event -> [E.Entity] -> [E.Entity]
