@@ -1,7 +1,8 @@
 module ECS.Systems where
 
-import Data.Maybe (catMaybes, fromMaybe)
+import Data.Maybe (catMaybes)
 import qualified Data.Map as M
+import qualified Data.IntMap.Strict as IM
 
 import qualified ECS.Components as C
 import qualified ECS.Entities as E
@@ -15,6 +16,33 @@ import Graphics.Gloss.Interface.Pure.Game
     , SpecialKey(KeyLeft, KeyRight)
     , KeyState(Up, Down)
     )
+
+-- HELPERS
+-- ========================================================================================
+updateIf :: (a -> Bool) -> (a -> a) -> a -> a
+updateIf test f x = if test x then f x else x
+
+updateIfHas :: (a -> Maybe b) -> (a -> a) -> a -> a
+updateIfHas query f x = case query x of 
+                            Just _   -> f x
+                            Nothing  -> x
+
+allUniquePairsIndices :: Int -> Int -> [(Int, Int)]
+allUniquePairsIndices i n
+    | i == n = []
+    | otherwise = ((,) i <$> [(i+1)..n]) ++ allUniquePairsIndices (i+1) n
+
+allUniquePairs :: [a] -> [(a,a)]
+allUniquePairs [] = []
+allUniquePairs xs = catMaybes $ liftMaybes <$> toEntities <$> uniqueIdxPairs
+    where idxToEntity = IM.fromList $ zip [1..] xs
+          uniqueIdxPairs = allUniquePairsIndices 1 (length xs)
+          toEntities = 
+               \(i,j) -> (IM.lookup i idxToEntity, IM.lookup j idxToEntity)
+          liftMaybes =
+               \(x,y) -> case (x,y) of 
+                            (Just u, Just v) -> Maybe (u,v)
+                            _                -> Nothing
 
 -- PHYSICS
 -- ========================================================================================
@@ -51,7 +79,7 @@ updateVelocity dx dy e = e {
 
 updateAnyPlayers :: [E.Entity] -> WS.ControlStream -> [E.Entity]
 updateAnyPlayers [] _ = []
-updateAnyPlayers es cs = (\e -> if E.isTony e then update e else e) <$> es
+updateAnyPlayers es cs = (updateIf E.isTony update) <$> es
     where update = 
             \entity -> case (WS.holdingLeftArrow cs, WS.holdingRightArrow cs) of
                     (True,  False) -> updateVelocity (-480) 0 entity
