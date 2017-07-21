@@ -41,7 +41,7 @@ allUniquePairs xs = catMaybes $ liftMaybes <$> toEntities <$> uniqueIdxPairs
                \(i,j) -> (IM.lookup i idxToEntity, IM.lookup j idxToEntity)
           liftMaybes =
                \(x,y) -> case (x,y) of 
-                            (Just u, Just v) -> Maybe (u,v)
+                            (Just u, Just v) -> Just (u,v)
                             _                -> Nothing
 
 -- PHYSICS
