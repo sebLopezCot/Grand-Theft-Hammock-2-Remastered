@@ -1,6 +1,8 @@
 module ECS.Systems where
 
 import Data.Maybe (catMaybes)
+import Data.List (tails)
+import Control.Monad ((<=<))
 import qualified Data.Map as M
 import qualified Data.IntMap.Strict as IM
 
@@ -27,22 +29,8 @@ updateIfHas query f x = case query x of
                             Just _   -> f x
                             Nothing  -> x
 
-allUniquePairsIndices :: Int -> Int -> [(Int, Int)]
-allUniquePairsIndices i n
-    | i == n = []
-    | otherwise = ((,) i <$> [(i+1)..n]) ++ allUniquePairsIndices (i+1) n
-
 allUniquePairs :: [a] -> [(a,a)]
-allUniquePairs [] = []
-allUniquePairs xs = catMaybes $ liftMaybes <$> toEntities <$> uniqueIdxPairs
-    where idxToEntity = IM.fromList $ zip [1..] xs
-          uniqueIdxPairs = allUniquePairsIndices 1 (length xs)
-          toEntities = 
-               \(i,j) -> (IM.lookup i idxToEntity, IM.lookup j idxToEntity)
-          liftMaybes =
-               \(x,y) -> case (x,y) of 
-                            (Just u, Just v) -> Just (u,v)
-                            _                -> Nothing
+allUniquePairs = (\l -> (,) (head l) <$> tail l) <=< init . tails
 
 -- PHYSICS
 -- ========================================================================================
