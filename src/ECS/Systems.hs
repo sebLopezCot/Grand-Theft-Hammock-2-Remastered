@@ -1,6 +1,6 @@
 module ECS.Systems where
 
-import Data.Maybe (catMaybes)
+import Data.Maybe (catMaybes, fromMaybe)
 import Data.List (tails)
 import Control.Monad ((<=<))
 import qualified Data.Map as M
@@ -32,6 +32,20 @@ updateIfHas query f x = case query x of
 allUniquePairs :: [a] -> [(a,a)]
 allUniquePairs = (\l -> (,) (head l) <$> tail l) <=< init . tails
 
+entityListToIntMap :: [a] -> IM.IntMap a
+entityListToIntMap xs = IM.fromList $ zip [0..] xs
+
+intMapToEntityList :: IM.IntMap a -> [a]
+intMapToEntityList im = snd <$> (IM.toList im)
+
+updateVelocity :: Float -> Float -> E.Entity -> E.Entity
+updateVelocity dx dy e = e { 
+    E.velocity = 
+        Just C.Velocity { C.vx = dx, 
+                          C.vy = dy
+                        } 
+}
+
 -- PHYSICS
 -- ========================================================================================
 kinematicsUpdate :: Float -> [E.Entity] -> [E.Entity]
@@ -51,20 +65,48 @@ kinematicsUpdate dt es = f <$> es
                                 }
                         }
 
+willCollideWith :: Float -> E.Entity -> E.Entity -> Bool
+willCollideWith dt e1 e2 = (E.isCollidable e1) && (E.isCollidable e2) 
+                                && not (right1 <= left2 || left1 >= right2)
+    where 
+        lookahead = 1
+
+        px1 = fromMaybe 0 $ C.px <$> E.position e1
+        vx1 = fromMaybe 0 $ C.vx <$> E.velocity e1
+        w1 = fromMaybe 0 $ C.width <$> E.dimensions e1
+        left1 = px1 - 0.5 * w1 + vx1 * dt * lookahead
+        right1 = px1 + 0.5 * w1 + vx1 * dt * lookahead
+
+        px2 = fromMaybe 0 $ C.px <$> E.position e2
+        vx2 = fromMaybe 0 $ C.vx <$> E.velocity e2
+        w2 = fromMaybe 0 $ C.width <$> E.dimensions e2
+        left2 = px2 - 0.5 * w2 + vx2 * dt * lookahead
+        right2 = px2 + 0.5 * w2 + vx2 * dt * lookahead
+
+collisionUpdate :: Float -> [E.Entity] -> [E.Entity]
+collisionUpdate dt es = intMapToEntityList 
+                            $ foldl update idxToEntity allCollisionPairs 
+    where
+        idxToEntity = entityListToIntMap es
+        allCollisionPairs = allUniquePairs $ zip [0..] es
+
+        update = \im ((i,e1),(j,e2)) -> 
+
+                if willCollideWith dt e1 e2
+                    then
+                        IM.insert j (updateVelocity 0 0 e2) 
+                            $ IM.insert i (updateVelocity 0 0 e1) im
+                        
+                    else im
+
 physicsSystem :: Float -> [E.Entity] -> [E.Entity]
-physicsSystem dt es = kinematicsUpdate dt es
+physicsSystem dt es = kinematicsUpdate dt 
+                    . collisionUpdate dt 
+                    $ es
 
 
 -- PLAYER CONTROL
 -- ========================================================================================
-updateVelocity :: Float -> Float -> E.Entity -> E.Entity
-updateVelocity dx dy e = e { 
-    E.velocity = 
-        Just C.Velocity { C.vx = dx, 
-                          C.vy = dy
-                        } 
-}
-
 updateAnyPlayers :: [E.Entity] -> WS.ControlStream -> [E.Entity]
 updateAnyPlayers [] _ = []
 updateAnyPlayers es cs = (updateIf E.isTony update) <$> es

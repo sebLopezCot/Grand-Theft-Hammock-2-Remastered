@@ -23,6 +23,7 @@ import qualified Data.Map as M
 import qualified ECS.Entities as Entities
 import qualified ECS.Systems as Systems
 import qualified ECS.ImageLoader as ImageLoader
+import qualified ECS.Components as Components
 import qualified WorldState as WS
 
 main :: IO ()
@@ -50,7 +51,13 @@ initial imgs = WS.WorldState {
     WS.imageAssets = imgs, 
     WS.entities = [
         Entities.beachBackground,
-        Entities.tony,
+        Entities.tony { 
+            Entities.position = 
+                Just Components.Position { 
+                    Components.px = -300, 
+                    Components.py = 0 
+                } 
+        },
         Entities.cop
     ],
     WS.controlStream = WS.ControlStream { 

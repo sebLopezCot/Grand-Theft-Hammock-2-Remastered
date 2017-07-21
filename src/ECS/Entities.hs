@@ -19,6 +19,7 @@ data Entity = Entity {
 
     isTony :: Bool,
     isCop :: Bool,
+    isCollidable :: Bool,
     isWeapon :: Bool,
     isBackground :: Bool
 } deriving (Eq, Ord, Show)
@@ -41,6 +42,7 @@ empty = Entity {
 
     isTony = False,
     isCop = False,
+    isCollidable = False,
     isWeapon = False,
     isBackground = False
 }
@@ -62,19 +64,19 @@ drawnWithPicture p e = e { pictureFilePath = Just p }
 isABackground :: FilePath -> Entity -> Entity
 isABackground p e = (drawnWithPicture p $ e) { isBackground = True }
 
-isABasicObject :: FilePath -> Dimensions -> Entity -> Entity
-isABasicObject p d e = 
+isABasicObject :: FilePath -> Dimensions -> Bool -> Entity -> Entity
+isABasicObject p d c e = 
                 startsFromRest
               . hasDimensions d
               . drawnWithPicture p
-              $ e
+              $ e { isCollidable = c }
 
 isAPerson :: FilePath -> Entity -> Entity
-isAPerson p e = isABasicObject p d e
+isAPerson p e = isABasicObject p d True e
     where d = Dimensions { width = 50, height = 100 }
 
 isAWeapon :: FilePath -> Entity -> Entity
-isAWeapon p e = (isABasicObject p d e) { isWeapon = True }
+isAWeapon p e = (isABasicObject p d False e) { isWeapon = True }
     where d = Dimensions { width = 40, height = 20 }
 
 -- Game entities
@@ -96,11 +98,11 @@ miniOozie = (isAWeapon "miniOozie.png" $ empty)
              { ammoEachReload = Just 50 }
 
 hammock :: Entity
-hammock = isABasicObject "hammock.png" dims $ empty
+hammock = isABasicObject "hammock.png" dims False $ empty
     where dims = Dimensions { width = 100, height = 50 }
 
 baggedHammock :: Entity
-baggedHammock = isABasicObject "baggedHammock.png" dims $ empty
+baggedHammock = isABasicObject "baggedHammock.png" dims False $ empty
     where dims = Dimensions { width = 20, height = 60 }
 
 beachBackground :: Entity
