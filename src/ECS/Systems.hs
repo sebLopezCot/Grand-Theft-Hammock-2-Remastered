@@ -1,6 +1,6 @@
 module ECS.Systems where
 
-import Data.Maybe (catMaybes, fromMaybe)
+import Data.Maybe (catMaybes, fromMaybe, isJust)
 import Data.List (tails)
 import Control.Monad ((<=<))
 import qualified Data.Map as M
@@ -25,9 +25,7 @@ updateIf :: (a -> Bool) -> (a -> a) -> a -> a
 updateIf test f x = if test x then f x else x
 
 updateIfHas :: (a -> Maybe b) -> (a -> a) -> a -> a
-updateIfHas query f x = case query x of 
-                            Just _   -> f x
-                            Nothing  -> x
+updateIfHas query f x = updateIf (isJust . query) f x
 
 allUniquePairs :: [a] -> [(a,a)]
 allUniquePairs = (\l -> (,) (head l) <$> tail l) <=< init . tails
