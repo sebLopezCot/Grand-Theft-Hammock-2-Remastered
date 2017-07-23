@@ -20,6 +20,7 @@ data Entity = Entity {
     isTony :: Bool,
     isCop :: Bool,
     isCollidable :: Bool,
+    isBullet :: Bool,
     isWeapon :: Bool,
     isBackground :: Bool
 } deriving (Eq, Ord, Show)
@@ -43,6 +44,7 @@ empty = Entity {
     isTony = False,
     isCop = False,
     isCollidable = False,
+    isBullet = False,
     isWeapon = False,
     isBackground = False
 }
@@ -88,6 +90,15 @@ tony = (isAPerson "tony.png" $ empty)
 cop :: Entity
 cop = (isAPerson "cop.png" $ empty) 
         { isCop = True, health = Just 3 }
+
+bullet :: Maybe Position -> Maybe Velocity -> Entity
+bullet mp mv = (isABasicObject "bullet.png" dims True 
+                $ empty) { 
+                    position = mp, 
+                    velocity = mv, 
+                    isBullet = True 
+                }
+    where dims = Dimensions { width = 20, height = 10 }
 
 revolver :: Entity
 revolver = (isAWeapon "revolver.png" $ empty) 

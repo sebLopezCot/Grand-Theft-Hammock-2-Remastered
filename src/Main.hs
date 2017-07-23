@@ -60,10 +60,7 @@ initial imgs = WS.WorldState {
         },
         Entities.cop
     ],
-    WS.controlStream = WS.ControlStream { 
-        WS.holdingLeftArrow = False, 
-        WS.holdingRightArrow = False 
-    }
+    WS.controlStream = WS.init
  }
 
 render :: WS.WorldState -> Picture

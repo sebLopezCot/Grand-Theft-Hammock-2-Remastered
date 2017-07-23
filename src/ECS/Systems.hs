@@ -1,7 +1,7 @@
 module ECS.Systems where
 
 import Data.Maybe (catMaybes, fromMaybe, isJust)
-import Data.List (tails)
+import Data.List (tails, find)
 import Control.Monad ((<=<))
 import qualified Data.Map as M
 import qualified Data.IntMap.Strict as IM
@@ -14,8 +14,8 @@ import Graphics.Gloss.Interface.Pure.Game
     ( Picture (..)
     , translate
     , Event(EventKey)
-    , Key(SpecialKey)
-    , SpecialKey(KeyLeft, KeyRight)
+    , Key(Char, MouseButton)
+    , MouseButton(LeftButton)
     , KeyState(Up, Down)
     )
 
@@ -43,6 +43,9 @@ updateVelocity dx dy e = e {
                           C.vy = dy
                         } 
 }
+
+(.<) :: (a -> b -> a) -> (a -> b -> a) -> (a -> b -> a)
+(.<) f g x y = f (g x y) y
 
 -- PHYSICS
 -- ========================================================================================
@@ -88,14 +91,28 @@ collisionUpdate dt es = intMapToEntityList
         idxToEntity = entityListToIntMap es
         allCollisionPairs = allUniquePairs $ zip [0..] es
 
-        update = \im ((i,e1),(j,e2)) -> 
+        update = \im pair@((_,e1),(_,e2)) -> 
 
                 if willCollideWith dt e1 e2
                     then
-                        IM.insert j (updateVelocity 0 0 e2) 
-                            $ IM.insert i (updateVelocity 0 0 e1) im
+                        case (any E.isTony [e1, e2],
+                                any E.isBullet [e1, e2],
+                                any E.isCop [e1, e2]) of
+
+                            (True, False, True) -> bump im pair
+                            (False, True, True) -> damage im pair
+                            _                   -> im
                         
                     else im
+
+        -- Bumping into something simply stops motion
+        bump = \im ((i,e1),(j,e2)) -> IM.insert j (updateVelocity 0 0 e2) 
+                                    $ IM.insert i (updateVelocity 0 0 e1) im
+
+        -- Damage implies a projectile being destroyed and a person being hurt
+        damage = \im ((i,_),(j,_)) -> IM.delete j 
+                                    $ IM.delete i im
+
 
 physicsSystem :: Float -> [E.Entity] -> [E.Entity]
 physicsSystem dt es = kinematicsUpdate dt 
@@ -105,26 +122,44 @@ physicsSystem dt es = kinematicsUpdate dt
 
 -- PLAYER CONTROL
 -- ========================================================================================
-updateAnyPlayers :: [E.Entity] -> WS.ControlStream -> [E.Entity]
-updateAnyPlayers [] _ = []
-updateAnyPlayers es cs = (updateIf E.isTony update) <$> es
+updateTonyPlayer :: [E.Entity] -> WS.ControlStream -> [E.Entity]
+updateTonyPlayer es cs = (updateIf E.isTony update) <$> es
     where update = 
             \entity -> case (WS.holdingLeftArrow cs, WS.holdingRightArrow cs) of
-                    (True,  False) -> updateVelocity (-480) 0 entity
-                    (False, True)  -> updateVelocity 480 0 entity
+                    (True,  False) -> updateVelocity (-580) 0 entity
+                    (False, True)  -> updateVelocity 580 0 entity
                     _              -> updateVelocity 0 0 entity
+
+updateTonyWeapon :: [E.Entity] -> WS.ControlStream -> [E.Entity]
+updateTonyWeapon es cs = foldl update es es
+    where 
+        tonyPos = E.position $ fromMaybe E.empty $ find E.isTony es
+        update = 
+            \elist _ -> if WS.holdingFire cs
+                                    && (not $ any (E.isBullet) elist)
+                                    && isJust tonyPos
+                                    then elist ++ [
+                                        E.bullet tonyPos (Just C.Velocity { 
+                                            C.vx = 800, C.vy = 0 
+                                        })
+                                    ]
+                                    else elist
 
 ctrlStreamSystem :: Event -> WS.ControlStream -> WS.ControlStream
 ctrlStreamSystem event cs = case event of
-    (EventKey (SpecialKey KeyLeft) Down _ _)  -> cs { WS.holdingLeftArrow = True }
+    (EventKey (Char 'a') Down _ _) -> cs { WS.holdingLeftArrow = True }
 
-    (EventKey (SpecialKey KeyRight) Down _ _) -> cs { WS.holdingRightArrow = True }
+    (EventKey (Char 'a') Up _ _)   -> cs { WS.holdingLeftArrow = False }
 
-    (EventKey (SpecialKey KeyLeft) Up _ _)    -> cs { WS.holdingLeftArrow = False }
+    (EventKey (Char 'd') Down _ _) -> cs { WS.holdingRightArrow = True }
 
-    (EventKey (SpecialKey KeyRight) Up _ _)   -> cs { WS.holdingRightArrow = False }
+    (EventKey (Char 'd') Up _ _)   -> cs { WS.holdingRightArrow = False }
      
-    _                                         -> cs
+    (EventKey (MouseButton LeftButton) Down _ _) -> cs { WS.holdingFire = True }
+
+    (EventKey (MouseButton LeftButton) Up _ _) -> cs { WS.holdingFire = False }
+
+    _                              -> cs
 
 controllerSystem :: Event -> [E.Entity] -> WS.ControlStream -> 
                         ([E.Entity], WS.ControlStream)
@@ -132,7 +167,9 @@ controllerSystem _ [] cs = ([], cs)
 controllerSystem ev es cs = (updatedEntities, updatedCtrlStream)
     where 
         updatedCtrlStream = ctrlStreamSystem ev cs
-        updatedEntities = updateAnyPlayers es updatedCtrlStream
+        updatedEntities = (updateTonyPlayer
+                       .< updateTonyWeapon)
+                          es updatedCtrlStream
 
 -- RENDERING
 -- ========================================================================================
@@ -147,6 +184,6 @@ renderSystem :: [E.Entity] -> M.Map String Picture -> [Picture]
 renderSystem [] _ = []
 renderSystem es m = catMaybes $ zipWith transform es (lookupPictures es m)
     where transform = \e mp -> case (mp, E.position e) of
-                    (Just p, Just pos) ->  Just $ translate (C.px pos) (C.py pos) p
+                    (Just p, Just pos) ->  Just $ translate (C.px pos) ((-150) + C.py pos) p
                     (Just p, Nothing)  ->  Just p
                     _                  ->  Nothing

@@ -10,7 +10,15 @@ import Graphics.Gloss.Interface.Pure.Game
 
 data ControlStream = ControlStream {
 	holdingLeftArrow :: Bool,
-	holdingRightArrow :: Bool	
+	holdingRightArrow :: Bool,
+	holdingFire :: Bool	
+}
+
+init :: ControlStream
+init = ControlStream { 
+    holdingLeftArrow = False, 
+    holdingRightArrow = False,
+    holdingFire = False 
 }
 
 data WorldState = WorldState {
