@@ -47,16 +47,16 @@ framerate :: Int
 framerate = 60
 
 initial :: M.Map String Picture -> WS.WorldState
-initial imgs = WS.WorldState { 
-    WS.imageAssets = imgs, 
+initial imgs = WS.WorldState {
+    WS.imageAssets = imgs,
     WS.entities = [
         Entities.beachBackground,
-        Entities.tony { 
-            Entities.position = 
-                Just Components.Position { 
-                    Components.px = -300, 
-                    Components.py = 0 
-                } 
+        Entities.tony {
+            Entities.position =
+                Just Components.Position {
+                    Components.px = -300,
+                    Components.py = 0
+                }
         },
         Entities.cop
     ],
@@ -68,7 +68,7 @@ render ws = pictures $ Systems.renderSystem (WS.entities ws) (WS.imageAssets ws)
 
 handle :: Event -> WS.WorldState -> WS.WorldState
 handle ev ws = ws { WS.entities = fst results, WS.controlStream = snd results }
-    where results = 
+    where results =
             Systems.controllerSystem ev (WS.entities ws) (WS.controlStream ws)
 
 step :: Float -> WS.WorldState -> WS.WorldState
@@ -137,9 +137,9 @@ step dt ws = ws { WS.entities = Systems.physicsSystem dt (WS.entities ws) }
 
 -- renderListItem :: (String, Int) -> Picture
 -- renderListItem (item, i) = let verticalPadding = listItemVerticalPadding
---                             in 
---                             translate (-340) (-verticalPadding*(fromIntegral i)) 
---                             $ scale 0.33 0.33 
+--                             in
+--                             translate (-340) (-verticalPadding*(fromIntegral i))
+--                             $ scale 0.33 0.33
 --                             $ text item
 
 -- renderListSelector :: Int -> Picture
@@ -150,23 +150,23 @@ step dt ws = ws { WS.entities = Systems.physicsSystem dt (WS.entities ws) }
 -- renderBackground p = translate 200 0 $ p
 
 -- render :: WorldState -> Picture
--- render (WorldState p (MenuList items s)) = 
+-- render (WorldState p (MenuList items s)) =
 --     Pictures (
---                   renderBackground p 
---                 : renderTitle 
---                 : renderListSelector s 
+--                   renderBackground p
+--                 : renderTitle
+--                 : renderListSelector s
 --                 : (renderListItem <$> zip items [0..])
 --             )
 
 -- handle :: Event -> WorldState -> WorldState
--- handle (EventKey (SpecialKey KeyDown) Down _ _) 
---                  (WorldState p (MenuList items s)) 
-                
+-- handle (EventKey (SpecialKey KeyDown) Down _ _)
+--                  (WorldState p (MenuList items s))
+
 --                 = WorldState p (MenuList items ((s+1) `mod` length items))
 
--- handle (EventKey (SpecialKey KeyUp) Down _ _) 
---                  (WorldState p (MenuList items s)) 
-                
+-- handle (EventKey (SpecialKey KeyUp) Down _ _)
+--                  (WorldState p (MenuList items s))
+
 --                 = WorldState p (MenuList items ((s-1) `mod` length items))
 -- handle _ ws = ws
 
