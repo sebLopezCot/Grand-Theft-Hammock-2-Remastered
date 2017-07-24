@@ -67,22 +67,19 @@ kinematicsUpdate dt es = f <$> es
                         }
 
 willCollideWith :: Float -> E.Entity -> E.Entity -> Bool
-willCollideWith dt e1 e2 = E.isCollidable e1 && E.isCollidable e2
-                                && not (right1 <= left2 || left1 >= right2)
-    where
-        lookahead = 1
-
-        px1 = fromMaybe 0 $ C.px <$> E.position e1
-        vx1 = fromMaybe 0 $ C.vx <$> E.velocity e1
-        w1 = fromMaybe 0 $ C.width <$> E.dimensions e1
-        left1 = px1 - 0.5 * w1 + vx1 * dt * lookahead
-        right1 = px1 + 0.5 * w1 + vx1 * dt * lookahead
-
-        px2 = fromMaybe 0 $ C.px <$> E.position e2
-        vx2 = fromMaybe 0 $ C.vx <$> E.velocity e2
-        w2 = fromMaybe 0 $ C.width <$> E.dimensions e2
-        left2 = px2 - 0.5 * w2 + vx2 * dt * lookahead
-        right2 = px2 + 0.5 * w2 + vx2 * dt * lookahead
+willCollideWith dt e1 e2 = fromMaybe False $ do
+    (left1, right1) <- getLR e1
+    (left2, right2) <- getLR e2
+    pure $ E.isCollidable e1 && E.isCollidable e2 && not (right1 <= left2 || left1 >= right2)
+  where
+    getLR e = do
+        px <- C.px <$> E.position e
+        vx <- C.vx <$> E.velocity e
+        w <- C.width <$> E.dimensions e
+        let px' = px + vx * dt
+        let left1 = px' - 0.5 * w
+        let right1 = px' + 0.5 * w
+        pure (left1, right1)
 
 collisionUpdate :: Float -> [E.Entity] -> [E.Entity]
 collisionUpdate dt es = intMapToEntityList
