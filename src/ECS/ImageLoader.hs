@@ -14,7 +14,7 @@ import Graphics.Gloss.Interface.Pure.Game
     )
 
 isImage :: FilePath -> Bool
-isImage fp = any (flip isSuffixOf fp) [".jpeg", ".jpg", ".png"]
+isImage fp = any (`isSuffixOf` fp) [".jpeg", ".jpg", ".png"]
 
 loadImagesFromAssetsDirectory :: IO (M.Map String Picture)
 loadImagesFromAssetsDirectory = do
@@ -25,5 +25,3 @@ loadImagesFromAssetsDirectory = do
     let imgmap = M.fromList $ catMaybes keypairs
 
     pure imgmap
-
-
