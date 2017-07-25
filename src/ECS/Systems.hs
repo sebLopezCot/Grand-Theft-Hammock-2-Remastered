@@ -1,10 +1,11 @@
 module ECS.Systems where
 
-import Data.Maybe (catMaybes, fromMaybe, isJust)
-import Data.List (tails, find)
 import Control.Monad ((<=<))
-import qualified Data.Map as M
+import Data.Foldable (toList)
+import Data.List (tails, find)
 import qualified Data.IntMap.Strict as IM
+import qualified Data.Map as M
+import Data.Maybe (catMaybes, fromMaybe, isJust)
 
 import qualified ECS.Components as C
 import qualified ECS.Entities as E
@@ -32,9 +33,6 @@ allUniquePairs = (\l -> (,) (head l) <$> tail l) <=< init . tails
 
 entityListToIntMap :: [a] -> IM.IntMap a
 entityListToIntMap xs = IM.fromList $ zip [0..] xs
-
-intMapToEntityList :: IM.IntMap a -> [a]
-intMapToEntityList im = snd <$> IM.toList im
 
 updateVelocity :: Float -> Float -> E.Entity -> E.Entity
 updateVelocity dx dy e = e {
@@ -82,8 +80,7 @@ willCollideWith dt e1 e2 = fromMaybe False $ do
         pure (left1, right1)
 
 collisionUpdate :: Float -> [E.Entity] -> [E.Entity]
-collisionUpdate dt es = intMapToEntityList
-                            $ foldl update idxToEntity allCollisionPairs
+collisionUpdate dt es = toList $ foldl update idxToEntity allCollisionPairs
     where
         idxToEntity = entityListToIntMap es
         allCollisionPairs = allUniquePairs $ zip [0..] es
