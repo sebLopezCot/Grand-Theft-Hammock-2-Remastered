@@ -115,11 +115,10 @@ physicsSystem dt = kinematicsUpdate dt
 -- PLAYER CONTROL
 -- ========================================================================================
 updateTonyPlayer :: [E.Entity] -> WS.ControlStream -> [E.Entity]
-updateTonyPlayer es cs = updateIf E.isTony update <$> es
-    where update entity = case (WS.holdingLeftArrow cs, WS.holdingRightArrow cs) of
-                    (True,  False) -> updateVelocity (-580) 0 entity
-                    (False, True)  -> updateVelocity 580 0 entity
-                    _              -> updateVelocity 0 0 entity
+updateTonyPlayer es cs = updateIf E.isTony (updateVelocity change 0) <$> es
+  where
+    change = boolToVel (WS.holdingRightArrow cs) - boolToVel (WS.holdingLeftArrow cs)
+    boolToVel = (580 *) . fromIntegral . fromEnum
 
 updateTonyWeapon :: [E.Entity] -> WS.ControlStream -> [E.Entity]
 updateTonyWeapon es cs = foldl update es es
