@@ -172,5 +172,6 @@ lookupPicture e m = flip M.lookup m =<< E.pictureFilePath e
 renderSystem :: [E.Entity] -> M.Map String Picture -> [Picture]
 renderSystem es m = catMaybes $ transform <$> es
   where
-    transform e = maybe id position (E.position e) <$> lookupPicture e m
-    position pos = translate (C.px pos) (-150 + C.py pos)
+    transform e = case E.position e of
+        Just pos -> translate (C.px pos) ((-150) + C.py pos) <$> lookupPicture e m
+        Nothing  -> lookupPicture e m
