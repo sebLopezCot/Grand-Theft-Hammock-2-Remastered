@@ -1,5 +1,6 @@
 module WorldState where
 
+import Data.IntMap (IntMap)
 import qualified Data.Map as M
 
 import ECS.Entities
@@ -23,6 +24,6 @@ init = ControlStream {
 
 data WorldState = WorldState {
     imageAssets :: M.Map String Picture,
-    entities :: [Entity],
+    entities :: IntMap Entity,
     controlStream :: ControlStream
 }
