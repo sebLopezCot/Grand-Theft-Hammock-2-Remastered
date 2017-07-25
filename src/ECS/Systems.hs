@@ -169,14 +169,8 @@ controllerSystem ev es cs = (updatedEntities, updatedCtrlStream)
 lookupPicture :: E.Entity -> M.Map String Picture -> Maybe Picture
 lookupPicture e m = flip M.lookup m =<< E.pictureFilePath e
 
-lookupPictures :: [E.Entity] -> M.Map String Picture -> [Maybe Picture]
-lookupPictures [] _ = []
-lookupPictures (e:es) m = lookupPicture e m : lookupPictures es m
-
 renderSystem :: [E.Entity] -> M.Map String Picture -> [Picture]
-renderSystem [] _ = []
-renderSystem es m = catMaybes $ zipWith transform es (lookupPictures es m)
-    where transform e mp = case (mp, E.position e) of
-                    (Just p, Just pos) ->  Just $ translate (C.px pos) ((-150) + C.py pos) p
-                    (Just p, Nothing)  ->  Just p
-                    _                  ->  Nothing
+renderSystem es m = catMaybes $ transform <$> es
+  where
+    transform e = maybe id position (E.position e) <$> lookupPicture e m
+    position pos = translate (C.px pos) (-150 + C.py pos)
