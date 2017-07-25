@@ -123,43 +123,35 @@ updateTonyPlayer es cs = updateIf E.isTony update <$> es
 
 updateTonyWeapon :: [E.Entity] -> WS.ControlStream -> [E.Entity]
 updateTonyWeapon es cs = foldl update es es
-    where
-        tonyPos = E.position $ fromMaybe E.empty $ find E.isTony es
-        update elist _ = if WS.holdingFire cs
-                                    && not (any E.isBullet elist)
-                                    && isJust tonyPos
-                                    then elist ++ [
-                                        E.bullet tonyPos (Just C.Velocity {
-                                            C.vx = 800, C.vy = 0
-                                        })
-                                    ]
-                                    else elist
+  where
+    tonyPos = E.position $ fromMaybe E.empty $ find E.isTony es
+    update elist _ = if WS.holdingFire cs
+                                && not (any E.isBullet elist)
+                                && isJust tonyPos
+                                then elist ++ [
+                                    E.bullet tonyPos (Just C.Velocity {
+                                        C.vx = 800, C.vy = 0
+                                    })
+                                ]
+                                else elist
 
 ctrlStreamSystem :: Event -> WS.ControlStream -> WS.ControlStream
-ctrlStreamSystem event cs = case event of
-    (EventKey (Char 'a') Down _ _) -> cs { WS.holdingLeftArrow = True }
+ctrlStreamSystem (EventKey k s _ _) cs = case k of
+    Char 'a'               -> cs { WS.holdingLeftArrow = toBool s }
+    Char 'd'               -> cs { WS.holdingRightArrow = toBool s }
+    MouseButton LeftButton -> cs { WS.holdingFire = toBool s }
+    _                      -> cs
+    where toBool Down = True
+          toBool Up = False
+ctrlStreamSystem _ cs = cs
 
-    (EventKey (Char 'a') Up _ _)   -> cs { WS.holdingLeftArrow = False }
-
-    (EventKey (Char 'd') Down _ _) -> cs { WS.holdingRightArrow = True }
-
-    (EventKey (Char 'd') Up _ _)   -> cs { WS.holdingRightArrow = False }
-
-    (EventKey (MouseButton LeftButton) Down _ _) -> cs { WS.holdingFire = True }
-
-    (EventKey (MouseButton LeftButton) Up _ _) -> cs { WS.holdingFire = False }
-
-    _                              -> cs
-
-controllerSystem :: Event -> [E.Entity] -> WS.ControlStream ->
-                        ([E.Entity], WS.ControlStream)
-controllerSystem _ [] cs = ([], cs)
+controllerSystem :: Event -> [E.Entity] -> WS.ControlStream -> ([E.Entity], WS.ControlStream)
 controllerSystem ev es cs = (updatedEntities, updatedCtrlStream)
-    where
-        updatedCtrlStream = ctrlStreamSystem ev cs
-        updatedEntities = (updateTonyPlayer
-                       .< updateTonyWeapon)
-                          es updatedCtrlStream
+  where
+    updatedCtrlStream = ctrlStreamSystem ev cs
+    updatedEntities = (updateTonyPlayer
+                   .< updateTonyWeapon)
+                      es updatedCtrlStream
 
 -- RENDERING
 -- ========================================================================================
