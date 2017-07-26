@@ -18,6 +18,7 @@ import Graphics.Gloss.Interface.Pure.Game
     -- , scale
     )
 
+import qualified Data.IntMap as IM
 import qualified Data.Map as M
 
 import qualified ECS.Entities as Entities
@@ -49,7 +50,7 @@ framerate = 60
 initial :: M.Map String Picture -> WS.WorldState
 initial imgs = WS.WorldState {
     WS.imageAssets = imgs,
-    WS.entities = [
+    WS.entities = IM.fromList $ zip [0 ..] [
         Entities.beachBackground,
         Entities.tony {
             Entities.position =

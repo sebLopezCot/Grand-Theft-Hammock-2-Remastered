@@ -3,6 +3,7 @@ module ECS.Systems where
 import Control.Monad ((<=<))
 import Data.Foldable (toList)
 import Data.List (tails, find)
+import Data.IntMap (IntMap)
 import qualified Data.IntMap.Strict as IM
 import qualified Data.Map as M
 import Data.Maybe (catMaybes, fromMaybe, isJust)
@@ -31,9 +32,6 @@ updateIfHas query = updateIf (isJust . query)
 allUniquePairs :: [a] -> [(a,a)]
 allUniquePairs = (\l -> (,) (head l) <$> tail l) <=< init . tails
 
-entityListToIntMap :: [a] -> IM.IntMap a
-entityListToIntMap xs = IM.fromList $ zip [0..] xs
-
 updateVelocity :: Float -> Float -> E.Entity -> E.Entity
 updateVelocity dx dy e = e {
     E.velocity =
@@ -47,7 +45,7 @@ updateVelocity dx dy e = e {
 
 -- PHYSICS
 -- ========================================================================================
-kinematicsUpdate :: Float -> [E.Entity] -> [E.Entity]
+kinematicsUpdate :: Float -> IntMap E.Entity -> IntMap E.Entity
 kinematicsUpdate dt es = f <$> es
     where f e = case (E.position e, E.velocity e) of
                 (Just pos, Just vel) -> g pos vel e
@@ -79,11 +77,10 @@ willCollideWith dt e1 e2 = fromMaybe False $ do
         let right1 = px' + 0.5 * w
         pure (left1, right1)
 
-collisionUpdate :: Float -> [E.Entity] -> [E.Entity]
-collisionUpdate dt es = toList $ foldl update idxToEntity allCollisionPairs
+collisionUpdate :: Float -> IntMap E.Entity -> IntMap E.Entity
+collisionUpdate dt es = foldl update es allCollisionPairs
     where
-        idxToEntity = entityListToIntMap es
-        allCollisionPairs = allUniquePairs $ zip [0..] es
+        allCollisionPairs = allUniquePairs $ IM.toList es
 
         update im pair@((_,e1),(_,e2)) =
 
@@ -107,33 +104,35 @@ collisionUpdate dt es = toList $ foldl update idxToEntity allCollisionPairs
                                 $ IM.delete i im
 
 
-physicsSystem :: Float -> [E.Entity] -> [E.Entity]
+physicsSystem :: Float -> IntMap E.Entity -> IntMap E.Entity
 physicsSystem dt = kinematicsUpdate dt
                  . collisionUpdate dt
 
 
 -- PLAYER CONTROL
 -- ========================================================================================
-updateTonyPlayer :: [E.Entity] -> WS.ControlStream -> [E.Entity]
+updateTonyPlayer :: IntMap E.Entity -> WS.ControlStream -> IntMap E.Entity
 updateTonyPlayer es cs = updateIf E.isTony update <$> es
     where update entity = case (WS.holdingLeftArrow cs, WS.holdingRightArrow cs) of
                     (True,  False) -> updateVelocity (-580) 0 entity
                     (False, True)  -> updateVelocity 580 0 entity
                     _              -> updateVelocity 0 0 entity
 
-updateTonyWeapon :: [E.Entity] -> WS.ControlStream -> [E.Entity]
+updateTonyWeapon :: IntMap E.Entity -> WS.ControlStream -> IntMap E.Entity
 updateTonyWeapon es cs = foldl update es es
   where
     tonyPos = E.position $ fromMaybe E.empty $ find E.isTony es
-    update elist _ = if WS.holdingFire cs
-                                && not (any E.isBullet elist)
-                                && isJust tonyPos
-                                then elist ++ [
-                                    E.bullet tonyPos (Just C.Velocity {
-                                        C.vx = 800, C.vy = 0
-                                    })
-                                ]
-                                else elist
+    update elist _ =
+        if WS.holdingFire cs
+            && not (any E.isBullet elist)
+            && isJust tonyPos
+        then IM.insert nextId (
+            E.bullet tonyPos (Just C.Velocity {
+                C.vx = 800, C.vy = 0
+            })
+        ) elist
+        else elist
+    nextId = fromMaybe 1 $ (+ 1) . fst . fst <$> IM.maxViewWithKey es
 
 ctrlStreamSystem :: Event -> WS.ControlStream -> WS.ControlStream
 ctrlStreamSystem (EventKey k s _ _) cs = case k of
@@ -145,7 +144,7 @@ ctrlStreamSystem (EventKey k s _ _) cs = case k of
           toBool Up = False
 ctrlStreamSystem _ cs = cs
 
-controllerSystem :: Event -> [E.Entity] -> WS.ControlStream -> ([E.Entity], WS.ControlStream)
+controllerSystem :: Event -> IntMap E.Entity -> WS.ControlStream -> (IntMap E.Entity, WS.ControlStream)
 controllerSystem ev es cs = (updatedEntities, updatedCtrlStream)
   where
     updatedCtrlStream = ctrlStreamSystem ev cs
@@ -158,8 +157,8 @@ controllerSystem ev es cs = (updatedEntities, updatedCtrlStream)
 lookupPicture :: E.Entity -> M.Map String Picture -> Maybe Picture
 lookupPicture e m = flip M.lookup m =<< E.pictureFilePath e
 
-renderSystem :: [E.Entity] -> M.Map String Picture -> [Picture]
-renderSystem es m = catMaybes $ transform <$> es
+renderSystem :: IntMap E.Entity -> M.Map String Picture -> [Picture]
+renderSystem es m = catMaybes $ transform <$> toList es
   where
     transform e = case E.position e of
         Just pos -> translate (C.px pos) ((-150) + C.py pos) <$> lookupPicture e m
