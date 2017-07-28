@@ -1,4 +1,10 @@
-module ECS.Components where
+module ECS.Components
+    ( Acceleration(Acceleration, ax, ay)
+    , Dimensions(Dimensions, height, width)
+    , MovementDirection(Leftward, Rightward)
+    , Position(Position, px, py)
+    , Velocity(Velocity, vx, vy)
+    ) where
 
 data Position          =     Position { px :: Float, py :: Float }
     deriving (Eq, Ord, Show)

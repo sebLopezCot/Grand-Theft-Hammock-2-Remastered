@@ -1,4 +1,4 @@
-module ECS.ImageLoader where
+module ECS.ImageLoader (loadImagesFromAssetsDirectory) where
 
 import System.Directory
 import Data.List

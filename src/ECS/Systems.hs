@@ -1,4 +1,4 @@
-module ECS.Systems where
+module ECS.Systems (controllerSystem, physicsSystem, renderSystem) where
 
 import Control.Monad ((<=<))
 import Data.Foldable (toList)
@@ -25,9 +25,6 @@ import Graphics.Gloss.Interface.Pure.Game
 -- ========================================================================================
 updateIf :: (a -> Bool) -> (a -> a) -> a -> a
 updateIf test f x = if test x then f x else x
-
-updateIfHas :: (a -> Maybe b) -> (a -> a) -> a -> a
-updateIfHas query = updateIf (isJust . query)
 
 allUniquePairs :: [a] -> [(a,a)]
 allUniquePairs = (\l -> (,) (head l) <$> tail l) <=< init . tails
