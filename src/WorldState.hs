@@ -1,4 +1,8 @@
-module WorldState where
+module WorldState
+    ( ControlStream(holdingFire, holdingLeftArrow, holdingRightArrow)
+    , WorldState (WorldState, controlStream, entities, imageAssets)
+    , WorldState.init
+    ) where
 
 import Data.IntMap (IntMap)
 import qualified Data.Map as M

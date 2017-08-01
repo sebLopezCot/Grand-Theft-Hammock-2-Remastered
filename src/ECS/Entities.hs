@@ -1,4 +1,21 @@
-module ECS.Entities where
+module ECS.Entities
+    ( Entity
+        ( dimensions
+        , isBullet
+        , isCollidable
+        , isCop
+        , isTony
+        , movementDirection
+        , position
+        , velocity
+        )
+    , beachBackground
+    , bullet
+    , cop
+    , empty
+    , pictureFilePath
+    , tony
+    ) where
 
 import ECS.Components
 
