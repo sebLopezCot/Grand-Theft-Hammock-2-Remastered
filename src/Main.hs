@@ -52,14 +52,34 @@ initial imgs = WS.WorldState {
     WS.imageAssets = imgs,
     WS.entities = IM.fromList $ zip [0 ..] [
         Entities.beachBackground,
+        Entities.treeCurveRight {
+            Entities.position = 
+                Just Components.Position {
+                    Components.px = -900,
+                    Components.py = 174 
+                }
+        },
+        Entities.treeCurveLeft {
+            Entities.position = 
+                Just Components.Position {
+                    Components.px = -500,
+                    Components.py = 174 
+                }
+        },
         Entities.tony {
             Entities.position =
                 Just Components.Position {
-                    Components.px = -300,
+                    Components.px = 0,
                     Components.py = 0
                 }
         },
-        Entities.cop
+        Entities.cop {
+            Entities.position = 
+                Just Components.Position {
+                    Components.px = 200,
+                    Components.py = 0
+                }
+        }
     ],
     WS.controlStream = WS.init
  }

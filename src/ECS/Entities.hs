@@ -118,3 +118,11 @@ baggedHammock = isABasicObject "baggedHammock.png" dims False empty
 
 beachBackground :: Entity
 beachBackground = isABackground "beachBackground.jpg" empty
+
+treeCurveLeft :: Entity
+treeCurveLeft = isABasicObject "treeCurveLeft.png" dims False empty
+    where dims = Dimensions { width = 400, height = 526 }
+
+treeCurveRight :: Entity
+treeCurveRight = isABasicObject "treeCurveRight.png" dims False empty
+    where dims = Dimensions { width = 400, height = 526 }

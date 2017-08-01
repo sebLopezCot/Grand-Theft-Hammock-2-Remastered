@@ -1,6 +1,8 @@
 module ECS.Systems where
 
-import Control.Monad ((<=<))
+import Control.Monad ((<=<), join)
+import Control.Applicative (liftA2)
+import Control.Arrow ((***))
 import Data.Foldable (toList)
 import Data.List (tails, find)
 import Data.IntMap (IntMap)
@@ -158,8 +160,17 @@ lookupPicture :: E.Entity -> M.Map String Picture -> Maybe Picture
 lookupPicture e m = flip M.lookup m =<< E.pictureFilePath e
 
 renderSystem :: IntMap E.Entity -> M.Map String Picture -> [Picture]
-renderSystem es m = catMaybes $ transform <$> toList es
+renderSystem es m = catMaybes $ transform <$> esList
   where
+    esList = toList es
+    maybeTonyPos = join (***) 
+                    ( <$> join (E.position <$> find E.isTony esList) ) (C.px,C.py)
+    (tx, ty) = fromMaybe (0,0) $ uncurry (liftA2 (,)) maybeTonyPos
     transform e = case E.position e of
-        Just pos -> translate (C.px pos) ((-150) + C.py pos) <$> lookupPicture e m
+        Just pos -> translate 
+                        ((C.px pos - tx) * boolToFloat ((not . E.isTony) e)) 
+                        ((-150) + C.py pos) 
+                        <$> lookupPicture e m
         Nothing  -> lookupPicture e m
+
+    boolToFloat = fromIntegral . fromEnum
