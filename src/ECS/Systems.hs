@@ -7,10 +7,11 @@ import Data.IntMap (IntMap)
 import qualified Data.IntMap.Strict as IM
 import qualified Data.Map as M
 import Data.Maybe (catMaybes, fromMaybe, isJust)
+import Data.Set (Set)
+import qualified Data.Set as S
 
 import qualified ECS.Components as C
 import qualified ECS.Entities as E
-import qualified WorldState as WS
 
 import Graphics.Gloss.Interface.Pure.Game
     ( Picture (..)
@@ -108,19 +109,19 @@ physicsSystem dt = kinematicsUpdate dt
 
 -- PLAYER CONTROL
 -- ========================================================================================
-updateTonyPlayer :: IntMap E.Entity -> WS.ControlStream -> IntMap E.Entity
+updateTonyPlayer :: IntMap E.Entity -> Set Key -> IntMap E.Entity
 updateTonyPlayer es cs = updateIf E.isTony update <$> es
-    where update entity = case (WS.holdingLeftArrow cs, WS.holdingRightArrow cs) of
+    where update entity = case (Char 'a' `elem` cs, Char 'd' `elem` cs) of
                     (True,  False) -> updateVelocity (-580) 0 entity
                     (False, True)  -> updateVelocity 580 0 entity
                     _              -> updateVelocity 0 0 entity
 
-updateTonyWeapon :: IntMap E.Entity -> WS.ControlStream -> IntMap E.Entity
+updateTonyWeapon :: IntMap E.Entity -> Set Key -> IntMap E.Entity
 updateTonyWeapon es cs = foldl update es es
   where
     tonyPos = E.position $ fromMaybe E.empty $ find E.isTony es
     update elist _ =
-        if WS.holdingFire cs
+        if MouseButton LeftButton `elem` cs
             && not (any E.isBullet elist)
             && isJust tonyPos
         then IM.insert nextId (
@@ -131,17 +132,12 @@ updateTonyWeapon es cs = foldl update es es
         else elist
     nextId = fromMaybe 1 $ (+ 1) . fst . fst <$> IM.maxViewWithKey es
 
-ctrlStreamSystem :: Event -> WS.ControlStream -> WS.ControlStream
-ctrlStreamSystem (EventKey k s _ _) cs = case k of
-    Char 'a'               -> cs { WS.holdingLeftArrow = toBool s }
-    Char 'd'               -> cs { WS.holdingRightArrow = toBool s }
-    MouseButton LeftButton -> cs { WS.holdingFire = toBool s }
-    _                      -> cs
-    where toBool Down = True
-          toBool Up = False
-ctrlStreamSystem _ cs = cs
+ctrlStreamSystem :: Event -> Set Key -> Set Key
+ctrlStreamSystem (EventKey k Down _ _) = S.insert k
+ctrlStreamSystem (EventKey k Up _ _) = S.delete k
+ctrlStreamSystem _ = id
 
-controllerSystem :: Event -> IntMap E.Entity -> WS.ControlStream -> (IntMap E.Entity, WS.ControlStream)
+controllerSystem :: Event -> IntMap E.Entity -> Set Key -> (IntMap E.Entity, Set Key)
 controllerSystem ev es cs = (updatedEntities, updatedCtrlStream)
   where
     updatedCtrlStream = ctrlStreamSystem ev cs

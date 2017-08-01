@@ -61,7 +61,7 @@ initial imgs = WS.WorldState {
         },
         Entities.cop
     ],
-    WS.controlStream = WS.init
+    WS.controlStream = mempty
  }
 
 render :: WS.WorldState -> Picture
