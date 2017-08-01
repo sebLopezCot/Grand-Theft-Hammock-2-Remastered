@@ -120,14 +120,17 @@ updateTonyPlayer es cs = updateIf E.isTony update <$> es
 updateTonyWeapon :: IntMap E.Entity -> WS.ControlStream -> IntMap E.Entity
 updateTonyWeapon es cs = foldl update es es
   where
-    tonyPos = E.position $ fromMaybe E.empty $ find E.isTony es
+    maybeTony = find E.isTony es
+    tonyPos = E.position $ fromMaybe E.empty $ maybeTony
+    tonyVel = fromMaybe C.Velocity {C.vx = 0, C.vy = 0} $ 
+                E.velocity $ fromMaybe E.empty $ maybeTony
     update elist _ =
         if WS.holdingFire cs
             && not (any E.isBullet elist)
             && isJust tonyPos
         then IM.insert nextId (
             E.bullet tonyPos (Just C.Velocity {
-                C.vx = 800, C.vy = 0
+                C.vx = max 0 (C.vx tonyVel) + 800, C.vy = 0
             })
         ) elist
         else elist
