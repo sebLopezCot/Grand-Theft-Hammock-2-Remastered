@@ -15,6 +15,8 @@ module ECS.Entities
     , empty
     , pictureFilePath
     , tony
+    , treeCurveLeft
+    , treeCurveRight
     ) where
 
 import ECS.Components
