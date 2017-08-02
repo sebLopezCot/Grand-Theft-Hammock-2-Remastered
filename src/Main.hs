@@ -93,7 +93,13 @@ handle ev ws = ws { WS.entities = fst results, WS.controlStream = snd results }
             Systems.controllerSystem ev (WS.entities ws) (WS.controlStream ws)
 
 step :: Float -> WS.WorldState -> WS.WorldState
-step dt ws = ws { WS.entities = Systems.physicsSystem dt (WS.entities ws) }
+step dt ws = ws { WS.entities = 
+                    (
+                        (Systems.unloadContentSystem dt)
+                      . (Systems.physicsSystem dt)
+                    
+                    ) (WS.entities ws) 
+                }
 
 
 

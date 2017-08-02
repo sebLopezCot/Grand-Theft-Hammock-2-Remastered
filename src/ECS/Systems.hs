@@ -1,4 +1,4 @@
-module ECS.Systems (controllerSystem, physicsSystem, renderSystem) where
+module ECS.Systems (controllerSystem, physicsSystem, renderSystem, unloadContentSystem) where
 
 import Control.Monad ((<=<), join)
 import Control.Applicative (liftA2)
@@ -41,6 +41,13 @@ updateVelocity dx dy e = e {
 
 (.<) :: (a -> b -> a) -> (a -> b -> a) -> (a -> b -> a)
 (.<) f g x y = f (g x y) y
+
+getTonyPos :: [E.Entity] -> (Float, Float)
+getTonyPos esList = tonyPos
+    where 
+        maybeTonyPos = join (***) 
+                    ( <$> join (E.position <$> find E.isTony esList) ) (C.px,C.py)
+        tonyPos = fromMaybe (0,0) $ uncurry (liftA2 (,)) maybeTonyPos
 
 -- PHYSICS
 -- ========================================================================================
@@ -163,9 +170,7 @@ renderSystem :: IntMap E.Entity -> M.Map String Picture -> [Picture]
 renderSystem es m = catMaybes $ transform <$> esList
   where
     esList = toList es
-    maybeTonyPos = join (***) 
-                    ( <$> join (E.position <$> find E.isTony esList) ) (C.px,C.py)
-    (tx, ty) = fromMaybe (0,0) $ uncurry (liftA2 (,)) maybeTonyPos
+    (tx, ty) = getTonyPos esList
     transform e = case E.position e of
         Just pos -> translate 
                         ((C.px pos - tx) * boolToFloat ((not . E.isTony) e)) 
@@ -174,3 +179,21 @@ renderSystem es m = catMaybes $ transform <$> esList
         Nothing  -> lookupPicture e m
 
     boolToFloat = fromIntegral . fromEnum
+
+
+
+-- UNLOADING CONTENT
+-- ========================================================================================
+unloadContentSystem :: Float -> IntMap E.Entity -> IntMap E.Entity
+unloadContentSystem dt es = foldl applyScreenBoundUnload es idxedBullets
+    where
+        (centerX, centerY) = getTonyPos $ toList es
+        idxedBullets = IM.toList $ IM.filter E.isBullet es
+        applyScreenBoundUnload em idxEnt = if outOfScreenBounds idxEnt 
+                                                then deleteBullet em idxEnt 
+                                                else em
+        deleteBullet em (i,e) = IM.delete i em
+        bulletPosX e = fromMaybe 0 $ C.px <$> E.position e
+        outOfScreenBounds (i,e) = abs (bulletPosX e - centerX) > (800.0 / 2) -- hardcoded wall for now
+
+
