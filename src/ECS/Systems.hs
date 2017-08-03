@@ -136,9 +136,13 @@ updateTonyWeapon es cs = foldl update es es
             && not (any E.isBullet elist)
             && isJust tonyPos
         then IM.insert nextId (
-            E.bullet tonyPos (Just C.Velocity {
-                C.vx = max 0 (C.vx tonyVel) + 800, C.vy = 0
-            })
+            E.bullet 
+                ((\tp -> tp { C.px = C.px tp + 74, C.py = C.py tp + 44 }) 
+                    <$> tonyPos) 
+                (Just C.Velocity {
+                    C.vx = max 0 (C.vx tonyVel) + 1200  , 
+                    C.vy = 0
+                })
         ) elist
         else elist
     nextId = fromMaybe 1 $ (+ 1) . fst . fst <$> IM.maxViewWithKey es
@@ -176,6 +180,7 @@ renderSystem es m = catMaybes $ transform <$> esList
                         ((C.px pos - tx) * boolToFloat ((not . E.isTony) e)) 
                         ((-150) + C.py pos) 
                         <$> lookupPicture e m
+
         Nothing  -> lookupPicture e m
 
     boolToFloat = fromIntegral . fromEnum
@@ -194,6 +199,6 @@ unloadContentSystem dt es = foldl applyScreenBoundUnload es idxedBullets
                                                 else em
         deleteBullet em (i,e) = IM.delete i em
         bulletPosX e = fromMaybe 0 $ C.px <$> E.position e
-        outOfScreenBounds (i,e) = abs (bulletPosX e - centerX) > (800.0 / 2) -- hardcoded wall for now
+        outOfScreenBounds (i,e) = abs (bulletPosX e - centerX) > (700.0 / 2) -- hardcoded wall for now
 
 

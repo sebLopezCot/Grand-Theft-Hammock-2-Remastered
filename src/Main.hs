@@ -51,7 +51,55 @@ initial :: M.Map String Picture -> WS.WorldState
 initial imgs = WS.WorldState {
     WS.imageAssets = imgs,
     WS.entities = IM.fromList $ zip [0 ..] [
-        Entities.beachBackground,
+        Entities.beachBackground {
+            Entities.position =
+                Just Components.Position {
+                    Components.px = -3162,
+                    Components.py = 150
+            }
+        },
+        Entities.beachBackground {
+            Entities.position =
+                Just Components.Position {
+                    Components.px = -2108,
+                    Components.py = 150
+            }
+        },
+        Entities.beachBackground {
+            Entities.position =
+                Just Components.Position {
+                    Components.px = -1054,
+                    Components.py = 150
+            }
+        },
+        Entities.beachBackground {
+            Entities.position =
+                Just Components.Position {
+                    Components.px = 0,
+                    Components.py = 150
+            }
+        },
+        Entities.beachBackground {
+            Entities.position =
+                Just Components.Position {
+                    Components.px = 1054,
+                    Components.py = 150
+            }
+        },
+        Entities.beachBackground {
+            Entities.position =
+                Just Components.Position {
+                    Components.px = 2108,
+                    Components.py = 150
+            }
+        },
+        Entities.beachBackground {
+            Entities.position =
+                Just Components.Position {
+                    Components.px = 3162,
+                    Components.py = 150
+            }
+        },
         Entities.treeCurveRight {
             Entities.position = 
                 Just Components.Position {
@@ -77,6 +125,20 @@ initial imgs = WS.WorldState {
             Entities.position = 
                 Just Components.Position {
                     Components.px = 200,
+                    Components.py = 0
+                }
+        },
+        Entities.cop {
+            Entities.position = 
+                Just Components.Position {
+                    Components.px = 800,
+                    Components.py = 0
+                }
+        },
+        Entities.cop {
+            Entities.position = 
+                Just Components.Position {
+                    Components.px = 1400 ,
                     Components.py = 0
                 }
         }

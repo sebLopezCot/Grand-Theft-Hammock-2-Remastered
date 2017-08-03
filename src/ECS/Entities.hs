@@ -5,6 +5,7 @@ module ECS.Entities
         , isCollidable
         , isCop
         , isTony
+        , isBackground
         , movementDirection
         , position
         , velocity
@@ -83,7 +84,10 @@ drawnWithPicture :: FilePath -> Entity -> Entity
 drawnWithPicture p e = e { pictureFilePath = Just p }
 
 isABackground :: FilePath -> Entity -> Entity
-isABackground p e = (drawnWithPicture p e) { isBackground = True }
+isABackground p e = (drawnWithPicture p e) { 
+    isBackground = True,
+    position = Just Position { px = 0, py = 0 }
+}
 
 isABasicObject :: FilePath -> Dimensions -> Bool -> Entity -> Entity
 isABasicObject p d c e =
@@ -136,7 +140,7 @@ baggedHammock = isABasicObject "baggedHammock.png" dims False empty
     where dims = Dimensions { width = 20, height = 60 }
 
 beachBackground :: Entity
-beachBackground = isABackground "beachBackground.jpg" empty
+beachBackground = isABackground "beachBackgroundLong.jpg" empty
 
 treeCurveLeft :: Entity
 treeCurveLeft = isABasicObject "treeCurveLeft.png" dims False empty
