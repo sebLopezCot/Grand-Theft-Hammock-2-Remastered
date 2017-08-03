@@ -10,17 +10,17 @@ import Data.Maybe (catMaybes, fromMaybe, isJust)
 import Data.Set (Set)
 import qualified Data.Set as S
 
-import qualified ECS.Components as C
-import qualified ECS.Entities as E
-
 import Graphics.Gloss.Interface.Pure.Game
-    ( Picture (..)
+    ( Picture
     , translate
     , Event(EventKey)
-    , Key(Char, MouseButton)
-    , MouseButton(LeftButton)
+    , Key
     , KeyState(Up, Down)
     )
+
+import Controls
+import qualified ECS.Components as C
+import qualified ECS.Entities as E
 
 -- HELPERS
 -- ========================================================================================
@@ -111,7 +111,7 @@ physicsSystem dt = kinematicsUpdate dt
 -- ========================================================================================
 updateTonyPlayer :: IntMap E.Entity -> Set Key -> IntMap E.Entity
 updateTonyPlayer es cs = updateIf E.isTony update <$> es
-    where update entity = case (Char 'a' `elem` cs, Char 'd' `elem` cs) of
+    where update entity = case (leftArrow `elem` cs, rightArrow `elem` cs) of
                     (True,  False) -> updateVelocity (-580) 0 entity
                     (False, True)  -> updateVelocity 580 0 entity
                     _              -> updateVelocity 0 0 entity
@@ -121,7 +121,7 @@ updateTonyWeapon es cs = foldl update es es
   where
     tonyPos = E.position $ fromMaybe E.empty $ find E.isTony es
     update elist _ =
-        if MouseButton LeftButton `elem` cs
+        if fireButton `elem` cs
             && not (any E.isBullet elist)
             && isJust tonyPos
         then IM.insert nextId (
