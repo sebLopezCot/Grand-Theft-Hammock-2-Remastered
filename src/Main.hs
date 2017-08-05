@@ -143,7 +143,7 @@ initial imgs = WS.WorldState {
                 }
         }
     ],
-    WS.controlStream = WS.init
+    WS.controlStream = mempty
  }
 
 render :: WS.WorldState -> Picture

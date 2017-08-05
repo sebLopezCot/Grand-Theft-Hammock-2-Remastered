@@ -1,33 +1,20 @@
 module WorldState
-    ( ControlStream(holdingFire, holdingLeftArrow, holdingRightArrow)
-    , WorldState (WorldState, controlStream, entities, imageAssets)
-    , WorldState.init
+    ( WorldState (WorldState, controlStream, entities, imageAssets)
     ) where
 
 import Data.IntMap (IntMap)
 import qualified Data.Map as M
+import Data.Set (Set)
 
 import ECS.Entities
 
 import Graphics.Gloss.Interface.Pure.Game
-    ( Picture (..)
+    ( Picture
+    , Key
     )
-
-data ControlStream = ControlStream {
-    holdingLeftArrow :: Bool,
-    holdingRightArrow :: Bool,
-    holdingFire :: Bool
-}
-
-init :: ControlStream
-init = ControlStream {
-    holdingLeftArrow = False,
-    holdingRightArrow = False,
-    holdingFire = False
-}
 
 data WorldState = WorldState {
     imageAssets :: M.Map String Picture,
     entities :: IntMap Entity,
-    controlStream :: ControlStream
+    controlStream :: Set Key
 }
