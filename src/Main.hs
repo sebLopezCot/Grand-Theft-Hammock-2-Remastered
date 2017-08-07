@@ -100,6 +100,7 @@ initial imgs = WS.WorldState {
                     Components.py = 150
             }
         },
+        Entities.ground,
         Entities.treeCurveRight {
             Entities.position = 
                 Just Components.Position {

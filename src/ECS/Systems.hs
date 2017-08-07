@@ -81,8 +81,8 @@ gravityUpdate dt es = (updateIf E.hasGravity f) <$> es
                         e
                 else e
 
-willCollideWith :: Float -> E.Entity -> E.Entity -> Bool
-willCollideWith dt e1 e2 = fromMaybe False $ do
+willCollideWithInX :: Float -> E.Entity -> E.Entity -> Bool
+willCollideWithInX dt e1 e2 = fromMaybe False $ do
     (left1, right1) <- getLR e1
     (left2, right2) <- getLR e2
     pure $ E.isCollidable e1 && E.isCollidable e2 && not (right1 <= left2 || left1 >= right2)
@@ -96,6 +96,21 @@ willCollideWith dt e1 e2 = fromMaybe False $ do
         let right1 = px' + 0.5 * w
         pure (left1, right1)
 
+willCollideWithInY :: Float -> E.Entity -> E.Entity -> Bool
+willCollideWithInY dt e1 e2 = fromMaybe False $ do
+    (top1, bottom1) <- getTB e1
+    (top2, bottom2) <- getTB e2
+    pure $ E.isCollidable e1 && E.isCollidable e2 && not (top1 <= bottom2 || bottom1 >= top2)
+  where
+    getTB e = do
+        py <- C.py <$> E.position e
+        vy <- C.vy <$> E.velocity e
+        h <- C.height <$> E.dimensions e
+        let py' = py + vy * dt
+        let top1 = py' + 0.5 * h
+        let bottom1 = py' - 0.5 * h
+        pure (top1, bottom1)
+
 collisionUpdate :: Float -> IntMap E.Entity -> IntMap E.Entity
 collisionUpdate dt es = foldl update es allCollisionPairs
     where
@@ -103,13 +118,15 @@ collisionUpdate dt es = foldl update es allCollisionPairs
 
         update im pair@((_,e1),(_,e2)) =
 
-                if willCollideWith dt e1 e2
+                if willCollideWithInX dt e1 e2 && willCollideWithInY dt e1 e2
                     then case (any E.isTony [e1, e2],
                                any E.isBullet [e1, e2],
-                               any E.isCop [e1, e2]) of
+                               any E.isCop [e1, e2],
+                               any E.isGround [e1, e2]) of
 
-                        (True, False, True) -> bump im pair
-                        (False, True, True) -> damage im pair
+                        (True, False, True, False)  -> bump im pair
+                        (False, True, True, False)  -> damage im pair
+                        (True, False, False, True)  -> bump im pair
                         _                   -> im
 
                     else im

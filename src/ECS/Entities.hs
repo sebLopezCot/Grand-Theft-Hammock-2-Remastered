@@ -5,6 +5,7 @@ module ECS.Entities
         , isCollidable
         , isCop
         , isTony
+        , isGround
         , hasGravity
         , isBackground
         , movementDirection
@@ -17,6 +18,7 @@ module ECS.Entities
     , empty
     , pictureFilePath
     , tony
+    , ground
     , treeCurveLeft
     , treeCurveRight
     ) where
@@ -44,6 +46,7 @@ data Entity = Entity {
     isCollidable :: Bool,
     isBullet :: Bool,
     isWeapon :: Bool,
+    isGround :: Bool,
     isBackground :: Bool
 } deriving (Eq, Ord, Show)
 
@@ -69,6 +72,7 @@ empty = Entity {
     isCollidable = False,
     isBullet = False,
     isWeapon = False,
+    isGround = False,
     isBackground = False
 }
 
@@ -141,6 +145,13 @@ hammock = isABasicObject "hammock.png" dims False empty
 baggedHammock :: Entity
 baggedHammock = isABasicObject "baggedHammock.png" dims False empty
     where dims = Dimensions { width = 20, height = 60 }
+
+ground :: Entity
+ground = (isABasicObject "" dims True empty) {
+    isGround = True,
+    position = Just Position { px = 0, py = -130 }
+}
+    where dims = Dimensions { width = 600, height = 150 }
 
 beachBackground :: Entity
 beachBackground = isABackground "beachBackgroundLong.jpg" empty
