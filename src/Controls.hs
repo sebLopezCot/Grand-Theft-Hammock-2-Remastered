@@ -1,4 +1,4 @@
-module Controls (fireButton, leftArrow, rightArrow) where
+module Controls (fireButton, jumpButton, leftArrow, rightArrow) where
 
 import Graphics.Gloss.Interface.Pure.Game
     ( Key(Char, MouseButton)
@@ -10,6 +10,9 @@ leftArrow = Char 'a'
 
 rightArrow :: Key
 rightArrow = Char 'd'
+
+jumpButton :: Key
+jumpButton = Char 'w'
 
 fireButton :: Key
 fireButton = MouseButton LeftButton

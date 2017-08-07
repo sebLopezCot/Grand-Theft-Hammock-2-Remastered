@@ -5,6 +5,7 @@ module ECS.Entities
         , isCollidable
         , isCop
         , isTony
+        , hasGravity
         , isBackground
         , movementDirection
         , position
@@ -39,6 +40,7 @@ data Entity = Entity {
 
     isTony :: Bool,
     isCop :: Bool,
+    hasGravity :: Bool,
     isCollidable :: Bool,
     isBullet :: Bool,
     isWeapon :: Bool,
@@ -63,6 +65,7 @@ empty = Entity {
 
     isTony = False,
     isCop = False,
+    hasGravity = False,
     isCollidable = False,
     isBullet = False,
     isWeapon = False,
@@ -97,7 +100,7 @@ isABasicObject p d c e =
               $ e { isCollidable = c }
 
 isAPerson :: FilePath -> Entity -> Entity
-isAPerson p = isABasicObject p d True
+isAPerson p e = (isABasicObject p d True e) { hasGravity = True }
     where d = Dimensions { width = 50, height = 100 }
 
 isAWeapon :: FilePath -> Entity -> Entity

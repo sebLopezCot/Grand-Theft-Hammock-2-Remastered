@@ -69,6 +69,21 @@ kinematicsUpdate dt es = f <$> es
                                 }
                         }
 
+gravityUpdate :: Float -> IntMap E.Entity -> IntMap E.Entity
+gravityUpdate dt es = (updateIf E.hasGravity f) <$> es
+    where 
+        yPos e = fromMaybe 0 $ C.py <$> E.position e
+        f e = if yPos e > 0 -- TODO: Remove position check (gravity should be acting at all times)
+                then updateVelocity 
+                        (fromMaybe 0 $ C.vx <$> E.velocity e) 
+                        (fromMaybe 0 $ 
+                            (subtract $ dt*(100*9.81)) <$> C.vy <$> E.velocity e)
+                        e
+                else updateVelocity 
+                        (fromMaybe 0 $ C.vx <$> E.velocity e) 
+                        (fromMaybe 0 $ C.vy <$> E.velocity e)
+                         e
+
 willCollideWith :: Float -> E.Entity -> E.Entity -> Bool
 willCollideWith dt e1 e2 = fromMaybe False $ do
     (left1, right1) <- getLR e1
@@ -113,6 +128,7 @@ collisionUpdate dt es = foldl update es allCollisionPairs
 
 physicsSystem :: Float -> IntMap E.Entity -> IntMap E.Entity
 physicsSystem dt = kinematicsUpdate dt
+                 . gravityUpdate dt
                  . collisionUpdate dt
 
 
@@ -120,10 +136,34 @@ physicsSystem dt = kinematicsUpdate dt
 -- ========================================================================================
 updateTonyPlayer :: IntMap E.Entity -> Set Key -> IntMap E.Entity
 updateTonyPlayer es cs = updateIf E.isTony update <$> es
-    where update entity = case (leftArrow `elem` cs, rightArrow `elem` cs) of
-                    (True,  False) -> updateVelocity (-580) 0 entity
-                    (False, True)  -> updateVelocity 580 0 entity
-                    _              -> updateVelocity 0 0 entity
+    where 
+        update = walkUpdate . jumpUpdate
+        jumpUpdate e = case (jumpButton `elem` cs) of
+                    True -> 
+                            if (fromMaybe 0 $ C.vy <$> E.velocity e) /= 100000 
+                                then
+                                    updateVelocity 
+                                        (fromMaybe 0 $ C.vx <$> E.velocity e) 
+                                        (fromMaybe 0 $ 
+                                            (+400) <$> C.vy <$> E.velocity e) e
+                                else e
+                    _    -> e
+
+        walkUpdate e = case (leftArrow `elem` cs, rightArrow `elem` cs) of
+                    (True,  False) -> updateVelocity 
+                                        (-580) 
+                                        (fromMaybe 0 $ C.vy <$> E.velocity e)
+                                        e
+
+                    (False, True)  -> updateVelocity 
+                                        (580) 
+                                        (fromMaybe 0 $ C.vy <$> E.velocity e)
+                                        e
+
+                    _              -> updateVelocity 
+                                        0 
+                                        (fromMaybe 0 $ C.vy <$> E.velocity e)
+                                        e
 
 updateTonyWeapon :: IntMap E.Entity -> Set Key -> IntMap E.Entity
 updateTonyWeapon es cs = foldl update es es
