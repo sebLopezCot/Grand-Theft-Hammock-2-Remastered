@@ -79,10 +79,7 @@ gravityUpdate dt es = (updateIf E.hasGravity f) <$> es
                         (fromMaybe 0 $ 
                             (subtract $ dt*(100*9.81)) <$> C.vy <$> E.velocity e)
                         e
-                else updateVelocity 
-                        (fromMaybe 0 $ C.vx <$> E.velocity e) 
-                        (fromMaybe 0 $ C.vy <$> E.velocity e)
-                         e
+                else e
 
 willCollideWith :: Float -> E.Entity -> E.Entity -> Bool
 willCollideWith dt e1 e2 = fromMaybe False $ do
