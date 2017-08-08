@@ -1,165 +1,142 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module ECS.Entities
     ( Entity
-        ( dimensions
-        , isBullet
-        , isCollidable
-        , isCop
-        , isTony
-        , isGround
-        , hasGravity
-        , isBackground
-        , movementDirection
-        , position
-        , velocity
-        )
     , beachBackground
     , bullet
     , cop
+    , dimensions
     , empty
+    , hasGravity
+    , isBackground
+    , isBullet
+    , isCollidable
+    , isCop
+    , isTony
+    , isGround
+    , movementDirection
     , pictureFilePath
+    , position
     , tony
     , ground
     , treeCurveLeft
     , treeCurveRight
+    , velocity
     ) where
+
+import Control.Lens (makeLenses, (&), (.~), (?~))
 
 import ECS.Components
 
 -- Entity Definition
 -- =====================================
-data Entity = Entity {
-    position :: Maybe Position,
-    velocity :: Maybe Velocity,
-    acceleration :: Maybe Acceleration,
-    movementDirection :: Maybe MovementDirection,
+data Entity = Entity
+    { _position :: Maybe Position
+    , _velocity :: Maybe Velocity
+    , _acceleration :: Maybe Acceleration
+    , _movementDirection :: Maybe MovementDirection
 
-    dimensions :: Maybe Dimensions,
+    , _dimensions :: Maybe Dimensions
 
-    pictureFilePath :: Maybe FilePath,
+    , _pictureFilePath :: Maybe FilePath
 
-    health :: Maybe Int,
-    ammoEachReload :: Maybe Int,
+    , _health :: Maybe Int
+    , _ammoEachReload :: Maybe Int
 
-    isTony :: Bool,
-    isCop :: Bool,
-    hasGravity :: Bool,
-    isCollidable :: Bool,
-    isBullet :: Bool,
-    isWeapon :: Bool,
-    isGround :: Bool,
-    isBackground :: Bool
-} deriving (Eq, Ord, Show)
+    , _isTony :: Bool
+    , _isCop :: Bool
+    , _hasGravity :: Bool
+    , _isCollidable :: Bool
+    , _isBullet :: Bool
+    , _isWeapon :: Bool
+    , _isGround :: Bool
+    , _isBackground :: Bool
+    } deriving (Eq, Ord, Show)
+makeLenses ''Entity
 
 -- Helper starting entities
 -- =====================================
 empty :: Entity
-empty = Entity {
-    position = Nothing,
-    velocity = Nothing,
-    acceleration = Nothing,
-    movementDirection = Nothing,
-
-    dimensions = Nothing,
-
-    pictureFilePath = Nothing,
-
-    health = Nothing,
-    ammoEachReload = Nothing,
-
-    isTony = False,
-    isCop = False,
-    hasGravity = False,
-    isCollidable = False,
-    isBullet = False,
-    isWeapon = False,
-    isGround = False,
-    isBackground = False
-}
+empty = Entity
+    Nothing Nothing Nothing Nothing
+    Nothing Nothing Nothing Nothing
+    False False False False
+    False False False False
 
 startsFromRest :: Entity -> Entity
-startsFromRest e = e {
-    position = Just Position { px = 0, py = 0 },
-    velocity = Just Velocity { vx = 0, vy = 0 },
-    acceleration = Just Acceleration { ax = 0, ay = 0 },
-    movementDirection = Just Rightward
-}
-
-hasDimensions :: Dimensions -> Entity -> Entity
-hasDimensions d e = e { dimensions = Just d }
-
-drawnWithPicture :: FilePath -> Entity -> Entity
-drawnWithPicture p e = e { pictureFilePath = Just p }
+startsFromRest e = e
+    & position ?~ Position 0 0
+    & velocity ?~ Velocity 0 0
+    & acceleration ?~ Acceleration 0 0
+    & movementDirection ?~ Rightward
 
 isABackground :: FilePath -> Entity -> Entity
-isABackground p e = (drawnWithPicture p e) { 
-    isBackground = True,
-    position = Just Position { px = 0, py = 0 }
-}
+isABackground p e = e
+    & pictureFilePath ?~ p
+    & isBackground .~ True
+    & position ?~ Position 0 0
 
 isABasicObject :: FilePath -> Dimensions -> Bool -> Entity -> Entity
-isABasicObject p d c e =
-                startsFromRest
-              . hasDimensions d
-              . drawnWithPicture p
-              $ e { isCollidable = c }
+isABasicObject p d c e = e
+    & isCollidable .~ c
+    & startsFromRest
+    & dimensions ?~ d
+    & pictureFilePath ?~ p
 
 isAPerson :: FilePath -> Entity -> Entity
-isAPerson p e = (isABasicObject p d True e) { hasGravity = True }
-    where d = Dimensions { width = 50, height = 100 }
+isAPerson p e = isABasicObject p d True e & hasGravity .~ True
+    where d = Dimensions 50 100
 
 isAWeapon :: FilePath -> Entity -> Entity
-isAWeapon p e = (isABasicObject p d False e) { isWeapon = True }
-    where d = Dimensions { width = 40, height = 20 }
+isAWeapon p e = isABasicObject p d False e & isWeapon .~ True
+    where d = Dimensions 40 20
 
 -- Game entities
 -- =====================================
 tony :: Entity
-tony = (isAPerson "tony.png" empty)
-        { isTony = True, health = Just 10 }
+tony = isAPerson "tony.png" empty
+    & isTony .~ True
+    & health ?~ 10
 
 cop :: Entity
-cop = (isAPerson "cop.png" empty)
-        { isCop = True, health = Just 3 }
+cop = isAPerson "cop.png" empty
+    & isCop .~ True
+    & health ?~ 3
 
-bullet :: Maybe Position -> Maybe Velocity -> Entity
-bullet mp mv = (isABasicObject "bullet.png" dims True
-                empty) {
-                    position = mp,
-                    velocity = mv,
-                    isBullet = True
-                }
-    where dims = Dimensions { width = 20, height = 10 }
+bullet :: Entity
+bullet = isABasicObject "bullet.png" dims True empty
+    & isBullet .~ True
+    where dims = Dimensions 20 10
 
 revolver :: Entity
-revolver = (isAWeapon "revolver.png" empty)
-            { ammoEachReload = Just 6 }
+revolver = isAWeapon "revolver.png" empty
+    & ammoEachReload ?~ 6
 
 miniOozie :: Entity
-miniOozie = (isAWeapon "miniOozie.png" empty)
-             { ammoEachReload = Just 50 }
+miniOozie = isAWeapon "miniOozie.png" empty
+    & ammoEachReload ?~ 50
 
 hammock :: Entity
 hammock = isABasicObject "hammock.png" dims False empty
-    where dims = Dimensions { width = 100, height = 50 }
+    where dims = Dimensions 100 50
 
 baggedHammock :: Entity
 baggedHammock = isABasicObject "baggedHammock.png" dims False empty
-    where dims = Dimensions { width = 20, height = 60 }
+    where dims = Dimensions 20 60
 
 ground :: Entity
-ground = (isABasicObject "" dims True empty) {
-    isGround = True,
-    position = Just Position { px = 0, py = -130 }
-}
-    where dims = Dimensions { width = 600, height = 150 }
+ground = isABasicObject "" dims True empty
+    & isGround .~ True
+    & position ?~ Position 0 (-130)
+    where dims = Dimensions 600 150
 
 beachBackground :: Entity
 beachBackground = isABackground "beachBackgroundLong.jpg" empty
 
 treeCurveLeft :: Entity
 treeCurveLeft = isABasicObject "treeCurveLeft.png" dims False empty
-    where dims = Dimensions { width = 400, height = 526 }
+    where dims = Dimensions 400 526
 
 treeCurveRight :: Entity
 treeCurveRight = isABasicObject "treeCurveRight.png" dims False empty
-    where dims = Dimensions { width = 400, height = 526 }
+    where dims = Dimensions 400 526

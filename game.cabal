@@ -13,6 +13,7 @@ executable game
                      , directory ==1.3.*
                      , gloss ==1.11.*
                      , gloss-juicy ==0.2.2
+                     , lens ==4.15.*
   other-modules:       Controls
                      , ECS.Components
                      , ECS.Entities

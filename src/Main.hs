@@ -18,13 +18,14 @@ import Graphics.Gloss.Interface.Pure.Game
     -- , scale
     )
 
+import Control.Lens ((&), (?~))
 import qualified Data.IntMap as IM
 import qualified Data.Map as M
 
-import qualified ECS.Entities as Entities
+import qualified ECS.Entities as E
 import qualified ECS.Systems as Systems
 import qualified ECS.ImageLoader as ImageLoader
-import qualified ECS.Components as Components
+import qualified ECS.Components as C
 import qualified WorldState as WS
 
 main :: IO ()
@@ -48,104 +49,26 @@ framerate :: Int
 framerate = 60
 
 initial :: M.Map String Picture -> WS.WorldState
-initial imgs = WS.WorldState {
-    WS.imageAssets = imgs,
-    WS.entities = IM.fromList $ zip [0 ..] [
-        Entities.beachBackground {
-            Entities.position =
-                Just Components.Position {
-                    Components.px = -3162,
-                    Components.py = 150
-            }
-        },
-        Entities.beachBackground {
-            Entities.position =
-                Just Components.Position {
-                    Components.px = -2108,
-                    Components.py = 150
-            }
-        },
-        Entities.beachBackground {
-            Entities.position =
-                Just Components.Position {
-                    Components.px = -1054,
-                    Components.py = 150
-            }
-        },
-        Entities.beachBackground {
-            Entities.position =
-                Just Components.Position {
-                    Components.px = 0,
-                    Components.py = 150
-            }
-        },
-        Entities.beachBackground {
-            Entities.position =
-                Just Components.Position {
-                    Components.px = 1054,
-                    Components.py = 150
-            }
-        },
-        Entities.beachBackground {
-            Entities.position =
-                Just Components.Position {
-                    Components.px = 2108,
-                    Components.py = 150
-            }
-        },
-        Entities.beachBackground {
-            Entities.position =
-                Just Components.Position {
-                    Components.px = 3162,
-                    Components.py = 150
-            }
-        },
-        Entities.ground,
-        Entities.treeCurveRight {
-            Entities.position = 
-                Just Components.Position {
-                    Components.px = -900,
-                    Components.py = 174 
-                }
-        },
-        Entities.treeCurveLeft {
-            Entities.position = 
-                Just Components.Position {
-                    Components.px = -500,
-                    Components.py = 174 
-                }
-        },
-        Entities.tony {
-            Entities.position =
-                Just Components.Position {
-                    Components.px = 0,
-                    Components.py = 0
-                }
-        },
-        Entities.cop {
-            Entities.position = 
-                Just Components.Position {
-                    Components.px = 200,
-                    Components.py = 0
-                }
-        },
-        Entities.cop {
-            Entities.position = 
-                Just Components.Position {
-                    Components.px = 800,
-                    Components.py = 0
-                }
-        },
-        Entities.cop {
-            Entities.position = 
-                Just Components.Position {
-                    Components.px = 1400 ,
-                    Components.py = 0
-                }
-        }
-    ],
-    WS.controlStream = mempty
- }
+initial imgs = WS.WorldState
+    { WS.imageAssets = imgs
+    , WS.entities = IM.fromList $ zip [0 ..]
+        [ E.beachBackground & E.position ?~ C.Position (-3162) 150
+        , E.beachBackground & E.position ?~ C.Position (-2108) 150
+        , E.beachBackground & E.position ?~ C.Position (-1054) 150
+        , E.beachBackground & E.position ?~ C.Position 0 150
+        , E.beachBackground & E.position ?~ C.Position 1054 150
+        , E.beachBackground & E.position ?~ C.Position 2108 150
+        , E.beachBackground & E.position ?~ C.Position 3162 150
+        , E.ground
+        , E.treeCurveRight & E.position ?~ C.Position (-900) 174
+        , E.treeCurveLeft & E.position ?~ C.Position (-500) 174
+        , E.tony & E.position ?~ C.Position 0 0
+        , E.cop & E.position ?~ C.Position 200 0
+        , E.cop & E.position ?~ C.Position 800 0
+        , E.cop & E.position ?~ C.Position 1400 0
+        ]
+    , WS.controlStream = mempty
+    }
 
 render :: WS.WorldState -> Picture
 render ws = pictures $ Systems.renderSystem (WS.entities ws) (WS.imageAssets ws)
@@ -156,13 +79,11 @@ handle ev ws = ws { WS.entities = fst results, WS.controlStream = snd results }
             Systems.controllerSystem ev (WS.entities ws) (WS.controlStream ws)
 
 step :: Float -> WS.WorldState -> WS.WorldState
-step dt ws = ws { WS.entities = 
-                    (
-                        (Systems.unloadContentSystem dt)
-                      . (Systems.physicsSystem dt)
-                    
-                    ) (WS.entities ws) 
-                }
+step dt ws = ws
+    { WS.entities = Systems.unloadContentSystem dt
+                  . Systems.physicsSystem dt
+                  $ WS.entities ws
+    }
 
 
 

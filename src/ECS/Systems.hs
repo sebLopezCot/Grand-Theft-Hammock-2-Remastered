@@ -1,12 +1,14 @@
 module ECS.Systems (controllerSystem, physicsSystem, renderSystem, unloadContentSystem) where
 
-import Control.Monad ((<=<), join)
 import Control.Applicative (liftA2)
 import Control.Arrow ((***))
+import Control.Lens (_Just, view, (&), (+~), (-~), (.~), (?~), (^.), (^?))
+import Control.Monad ((<=<), join)
+import Data.Bool (bool)
 import Data.Foldable (toList)
-import Data.List (tails, find)
 import Data.IntMap (IntMap)
 import qualified Data.IntMap.Strict as IM
+import Data.List (tails, find)
 import qualified Data.Map as M
 import Data.Maybe (catMaybes, fromMaybe, isJust)
 import Data.Set (Set)
@@ -32,65 +34,46 @@ updateIf test f x = if test x then f x else x
 allUniquePairs :: [a] -> [(a,a)]
 allUniquePairs = (\l -> (,) (head l) <$> tail l) <=< init . tails
 
-updateVelocity :: Float -> Float -> E.Entity -> E.Entity
-updateVelocity dx dy e = e {
-    E.velocity =
-        Just C.Velocity { C.vx = dx,
-                          C.vy = dy
-                        }
-}
-
 (.<) :: (a -> b -> a) -> (a -> b -> a) -> (a -> b -> a)
 (.<) f g x y = f (g x y) y
 
 getTonyPos :: [E.Entity] -> (Float, Float)
 getTonyPos esList = tonyPos
-    where 
-        maybeTonyPos = join (***) 
-                    ( <$> join (E.position <$> find E.isTony esList) ) (C.px,C.py)
-        tonyPos = fromMaybe (0,0) $ uncurry (liftA2 (,)) maybeTonyPos
+  where 
+    maybeTonyPos = join (***) 
+        ( <$> join (view E.position <$> find (view E.isTony) esList) ) (view C.px, view C.py)
+    tonyPos = fromMaybe (0,0) $ uncurry (liftA2 (,)) maybeTonyPos
 
 -- PHYSICS
 -- ========================================================================================
 kinematicsUpdate :: Float -> IntMap E.Entity -> IntMap E.Entity
 kinematicsUpdate dt es = f <$> es
-    where f e = case (E.position e, E.velocity e) of
-                (Just pos, Just vel) -> g pos vel e
-                _                    -> e
-
-          g p v ke = ke {
-                            E.movementDirection = if C.vx v >= 0
-                                then Just C.Rightward
-                                else Just C.Leftward ,
-                            E.position =
-                                Just C.Position {
-                                    C.px = C.px p + dt * C.vx v,
-                                    C.py = C.py p + dt * C.vy v
-                                }
-                        }
+  where
+    f e = case (e ^. E.position, e ^. E.velocity) of
+        (Just _, Just vel) -> g vel e
+        _                    -> e
+    g v ke = ke
+        & E.movementDirection ?~ bool C.Leftward C.Rightward (v ^. C.vx >= 0)
+        & E.position . _Just . C.px +~ dt * v ^. C.vx
+        & E.position . _Just . C.py +~ dt * v ^. C.vy
 
 gravityUpdate :: Float -> IntMap E.Entity -> IntMap E.Entity
-gravityUpdate dt es = (updateIf E.hasGravity f) <$> es
-    where 
-        yPos e = fromMaybe 0 $ C.py <$> E.position e
-        f e = if yPos e > 0 -- TODO: Remove position check (gravity should be acting at all times)
-                then updateVelocity 
-                        (fromMaybe 0 $ C.vx <$> E.velocity e) 
-                        (fromMaybe 0 $ 
-                            (subtract $ dt*(100*9.81)) <$> C.vy <$> E.velocity e)
-                        e
-                else e
+gravityUpdate dt es = updateIf (view E.hasGravity) f <$> es
+  where 
+    yPos e = sum $ e ^? E.position . _Just . C.py
+    -- TODO: Remove position check (gravity should be acting at all times)
+    f e = bool id (E.velocity . _Just . C.vy -~ dt * 100 * 981) (yPos e > 0) e
 
 willCollideWithInX :: Float -> E.Entity -> E.Entity -> Bool
 willCollideWithInX dt e1 e2 = fromMaybe False $ do
     (left1, right1) <- getLR e1
     (left2, right2) <- getLR e2
-    pure $ E.isCollidable e1 && E.isCollidable e2 && not (right1 <= left2 || left1 >= right2)
+    pure $ e1 ^. E.isCollidable && e2 ^. E.isCollidable && not (right1 <= left2 || left1 >= right2)
   where
     getLR e = do
-        px <- C.px <$> E.position e
-        vx <- C.vx <$> E.velocity e
-        w <- C.width <$> E.dimensions e
+        px <- e ^? E.position . _Just . C.px
+        vx <- e ^? E.velocity . _Just . C.vx
+        w <- e ^? E.dimensions . _Just . C.width
         let px' = px + vx * dt
         let left1 = px' - 0.5 * w
         let right1 = px' + 0.5 * w
@@ -100,12 +83,12 @@ willCollideWithInY :: Float -> E.Entity -> E.Entity -> Bool
 willCollideWithInY dt e1 e2 = fromMaybe False $ do
     (top1, bottom1) <- getTB e1
     (top2, bottom2) <- getTB e2
-    pure $ E.isCollidable e1 && E.isCollidable e2 && not (top1 <= bottom2 || bottom1 >= top2)
+    pure $ e1 ^. E.isCollidable && e2 ^. E.isCollidable && not (top1 <= bottom2 || bottom1 >= top2)
   where
     getTB e = do
-        py <- C.py <$> E.position e
-        vy <- C.vy <$> E.velocity e
-        h <- C.height <$> E.dimensions e
+        py <- e ^? E.position . _Just . C.py
+        vy <- e ^? E.velocity . _Just . C.vy
+        h <- e ^? E.dimensions . _Just . C.height
         let py' = py + vy * dt
         let top1 = py' + 0.5 * h
         let bottom1 = py' - 0.5 * h
@@ -113,31 +96,29 @@ willCollideWithInY dt e1 e2 = fromMaybe False $ do
 
 collisionUpdate :: Float -> IntMap E.Entity -> IntMap E.Entity
 collisionUpdate dt es = foldl update es allCollisionPairs
-    where
-        allCollisionPairs = allUniquePairs $ IM.toList es
+  where
+    allCollisionPairs = allUniquePairs $ IM.toList es
 
-        update im pair@((_,e1),(_,e2)) =
+    update im pair@((_,e1),(_,e2)) =
+        if willCollideWithInX dt e1 e2 && willCollideWithInY dt e1 e2
+        then case (any (view E.isTony) [e1, e2],
+                   any (view E.isBullet) [e1, e2],
+                   any (view E.isCop) [e1, e2],
+                   any (view E.isGround) [e1, e2]) of
 
-                if willCollideWithInX dt e1 e2 && willCollideWithInY dt e1 e2
-                    then case (any E.isTony [e1, e2],
-                               any E.isBullet [e1, e2],
-                               any E.isCop [e1, e2],
-                               any E.isGround [e1, e2]) of
+            (True, False, True, False)  -> bump im pair
+            (False, True, True, False)  -> damage im pair
+            (True, False, False, True)  -> bump im pair
+            _                   -> im
+        else im
 
-                        (True, False, True, False)  -> bump im pair
-                        (False, True, True, False)  -> damage im pair
-                        (True, False, False, True)  -> bump im pair
-                        _                   -> im
+    -- Bumping into something simply stops motion
+    bump im ((i,e1),(j,e2)) = IM.insert j (e2 & E.velocity ?~ C.Velocity 0 0)
+                            $ IM.insert i (e1 & E.velocity ?~ C.Velocity 0 0) im
 
-                    else im
-
-        -- Bumping into something simply stops motion
-        bump im ((i,e1),(j,e2)) = IM.insert j (updateVelocity 0 0 e2)
-                                $ IM.insert i (updateVelocity 0 0 e1) im
-
-        -- Damage implies a projectile being destroyed and a person being hurt
-        damage im ((i,_),(j,_)) = IM.delete j
-                                $ IM.delete i im
+    -- Damage implies a projectile being destroyed and a person being hurt
+    damage im ((i,_),(j,_)) = IM.delete j
+                            $ IM.delete i im
 
 
 physicsSystem :: Float -> IntMap E.Entity -> IntMap E.Entity
@@ -149,56 +130,31 @@ physicsSystem dt = kinematicsUpdate dt
 -- PLAYER CONTROL
 -- ========================================================================================
 updateTonyPlayer :: IntMap E.Entity -> Set Key -> IntMap E.Entity
-updateTonyPlayer es cs = updateIf E.isTony update <$> es
-    where 
-        update = walkUpdate . jumpUpdate
-        jumpUpdate e = case (jumpButton `elem` cs) of
-                    True -> 
-                            if (fromMaybe 0 $ C.vy <$> E.velocity e) /= 100000 
-                                then
-                                    updateVelocity 
-                                        (fromMaybe 0 $ C.vx <$> E.velocity e) 
-                                        (fromMaybe 0 $ 
-                                            (+400) <$> C.vy <$> E.velocity e) e
-                                else e
-                    _    -> e
+updateTonyPlayer es cs = updateIf (view E.isTony) update <$> es
+  where 
+    update = walkUpdate . bool id jumpUpdate (jumpButton `elem` cs)
+    jumpUpdate e = if sum (e ^? E.velocity . _Just . C.vy) /= 100000 
+        then e & E.velocity . _Just . C.vy +~ 400
+        else e
 
-        walkUpdate e = case (leftArrow `elem` cs, rightArrow `elem` cs) of
-                    (True,  False) -> updateVelocity 
-                                        (-580) 
-                                        (fromMaybe 0 $ C.vy <$> E.velocity e)
-                                        e
-
-                    (False, True)  -> updateVelocity 
-                                        (580) 
-                                        (fromMaybe 0 $ C.vy <$> E.velocity e)
-                                        e
-
-                    _              -> updateVelocity 
-                                        0 
-                                        (fromMaybe 0 $ C.vy <$> E.velocity e)
-                                        e
+    walkUpdate e = case (leftArrow `elem` cs, rightArrow `elem` cs) of
+        (True,  False) -> e & E.velocity . _Just . C.vx .~ -580
+        (False, True)  -> e & E.velocity . _Just . C.vx .~ 580
+        _              -> e & E.velocity . _Just . C.vx .~ 0
 
 updateTonyWeapon :: IntMap E.Entity -> Set Key -> IntMap E.Entity
 updateTonyWeapon es cs = foldl update es es
   where
-    maybeTony = find E.isTony es
-    tonyPos = E.position $ fromMaybe E.empty $ maybeTony
-    tonyVel = fromMaybe C.Velocity {C.vx = 0, C.vy = 0} $ 
-                E.velocity $ fromMaybe E.empty $ maybeTony
+    maybeTony = find (view E.isTony) es
+    tonyPos = maybeTony ^? _Just . E.position . _Just
+    tonyVel = fromMaybe (C.Velocity 0 0) $ maybeTony ^? _Just . E.velocity . _Just
     update elist _ =
         if fireButton `elem` cs
-            && not (any E.isBullet elist)
+            && not (any (view E.isBullet) elist)
             && isJust tonyPos
-        then IM.insert nextId (
-            E.bullet 
-                ((\tp -> tp { C.px = C.px tp + 74, C.py = C.py tp + 44 }) 
-                    <$> tonyPos) 
-                (Just C.Velocity {
-                    C.vx = max 0 (C.vx tonyVel) + 1200  , 
-                    C.vy = 0
-                })
-        ) elist
+        then flip (IM.insert nextId) elist $ E.bullet 
+            & E.position .~ (tonyPos & _Just . C.px +~ 74 & _Just . C.py +~ 44)
+            & E.velocity ?~ C.Velocity (max 0 (tonyVel ^. C.vx) + 1200) 0
         else elist
     nextId = fromMaybe 1 $ (+ 1) . fst . fst <$> IM.maxViewWithKey es
 
@@ -218,19 +174,18 @@ controllerSystem ev es cs = (updatedEntities, updatedCtrlStream)
 -- RENDERING
 -- ========================================================================================
 lookupPicture :: E.Entity -> M.Map String Picture -> Maybe Picture
-lookupPicture e m = flip M.lookup m =<< E.pictureFilePath e
+lookupPicture e m = flip M.lookup m =<< e ^. E.pictureFilePath
 
 renderSystem :: IntMap E.Entity -> M.Map String Picture -> [Picture]
 renderSystem es m = catMaybes $ transform <$> esList
   where
     esList = toList es
-    (tx, ty) = getTonyPos esList
-    transform e = case E.position e of
+    (tx, _) = getTonyPos esList
+    transform e = case e ^. E.position of
         Just pos -> translate 
-                        ((C.px pos - tx) * boolToFloat ((not . E.isTony) e)) 
-                        ((-150) + C.py pos) 
-                        <$> lookupPicture e m
-
+            ((view C.px pos - tx) * boolToFloat ((not . view E.isTony) e)) 
+            (view C.py pos - 150) 
+            <$> lookupPicture e m
         Nothing  -> lookupPicture e m
 
     boolToFloat = fromIntegral . fromEnum
@@ -240,15 +195,13 @@ renderSystem es m = catMaybes $ transform <$> esList
 -- UNLOADING CONTENT
 -- ========================================================================================
 unloadContentSystem :: Float -> IntMap E.Entity -> IntMap E.Entity
-unloadContentSystem dt es = foldl applyScreenBoundUnload es idxedBullets
-    where
-        (centerX, centerY) = getTonyPos $ toList es
-        idxedBullets = IM.toList $ IM.filter E.isBullet es
-        applyScreenBoundUnload em idxEnt = if outOfScreenBounds idxEnt 
-                                                then deleteBullet em idxEnt 
-                                                else em
-        deleteBullet em (i,e) = IM.delete i em
-        bulletPosX e = fromMaybe 0 $ C.px <$> E.position e
-        outOfScreenBounds (i,e) = abs (bulletPosX e - centerX) > (700.0 / 2) -- hardcoded wall for now
-
-
+unloadContentSystem _ es = foldl applyScreenBoundUnload es idxedBullets
+  where
+    (centerX, _) = getTonyPos $ toList es
+    idxedBullets = IM.toList $ IM.filter (view E.isBullet) es
+    applyScreenBoundUnload em idxEnt = if outOfScreenBounds idxEnt 
+                                            then deleteBullet em idxEnt 
+                                            else em
+    deleteBullet em (i, _) = IM.delete i em
+    bulletPosX e = sum $ e ^? E.position . _Just . C.px
+    outOfScreenBounds (_, e) = abs (bulletPosX e - centerX) > (700.0 / 2) -- hardcoded wall for now
