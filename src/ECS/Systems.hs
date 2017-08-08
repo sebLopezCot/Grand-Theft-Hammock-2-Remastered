@@ -62,7 +62,7 @@ gravityUpdate dt es = updateIf (view E.hasGravity) f <$> es
   where 
     yPos e = sum $ e ^? E.position . _Just . C.py
     -- TODO: Remove position check (gravity should be acting at all times)
-    f e = bool id (E.velocity . _Just . C.vy -~ dt * 100 * 981) (yPos e > 0) e
+    f e = bool id (E.velocity . _Just . C.vy -~ dt * 100 * 9.81) (yPos e > 0) e
 
 willCollideWithInX :: Float -> E.Entity -> E.Entity -> Bool
 willCollideWithInX dt e1 e2 = fromMaybe False $ do
